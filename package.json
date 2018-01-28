@@ -1,0 +1,26 @@
+{
+  "name": "matrix-discord-bridge",
+  "version": "1.0.0",
+  "description": "A Discord bot and Matrix client, which link Matrix rooms to Discord \"servers\"",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jython234/matrix-discord-bridge.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jython234/matrix-discord-bridge/issues"
+  },
+  "homepage": "https://github.com/jython234/matrix-discord-bridge#readme",
+  "dependencies": {
+    "discord.js": "^11.3.0",
+    "matrix-js-sdk": "^0.9.2",
+    "node-opus": "^0.2.7",
+    "request": "^2.83.0",
+    "yamljs": "^0.3.0"
+  }
+}
