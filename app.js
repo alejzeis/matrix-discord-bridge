@@ -163,7 +163,7 @@ discordClient.on("reconnecting", () => {
 discordClient.on("message", message => {
     if(message.author.username === config.discord.username) return;
     if(message.channel.id !== config.discord.channel) return;
-    if(message.content == null || message.content == "") return;
+    if((message.content == null || message.content == "") && message.attachments.size == 0) return;
 
     let author = message.member.nickname == null ? message.author.username : message.member.nickname;
 
