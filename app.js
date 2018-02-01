@@ -252,8 +252,8 @@ matrixClient.on("Room.timeline", (event, room, startOfTimeline) => {
                     discordChannel.send("**" + event.getSender() + "**: ***Sent an image:*** *" + event.getContent().body + "*", new Discord.Attachment(downloadedLocation, event.getContent().body))
                         .then(() => fs.unlinkSync(downloadedLocation));
                         // Delete the image we downloaded after we uploaded it
-                }
-            });
+                });
+            }
             break;
         case "m.file":
             // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
