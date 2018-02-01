@@ -243,10 +243,16 @@ matrixClient.on("Room.timeline", (event, room, startOfTimeline) => {
     //console.log(event.getContent());
     switch(event.getContent().msgtype) {
         case "m.image":
-            downloadFromMatrix(event.getContent().url.replace("mxc://", ""), event.getContent().body, (mimeType, downloadedLocation) => {
-                discordChannel.send("**" + event.getSender() + "**: ***Sent an image:*** *" + event.getContent().body + "*", new Discord.Attachment(downloadedLocation, event.getContent().body))
-                    .then(() => fs.unlinkSync(downloadedLocation));
-                    // Delete the image we downloaded after we uploaded it
+            // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
+            if(event.getContent().info.size >= (1024*1024*8)) {
+                // File is too big, send link then
+                discordChannel.send("**" + event.getSender() + "**: ***Sent an image:*** " + config.matrix.serverURL + "/_matrix/media/v1/download/" + event.getContent().url.replace("mxc://", ""));
+            } else {
+                downloadFromMatrix(event.getContent().url.replace("mxc://", ""), event.getContent().body, (mimeType, downloadedLocation) => {
+                    discordChannel.send("**" + event.getSender() + "**: ***Sent an image:*** *" + event.getContent().body + "*", new Discord.Attachment(downloadedLocation, event.getContent().body))
+                        .then(() => fs.unlinkSync(downloadedLocation));
+                        // Delete the image we downloaded after we uploaded it
+                }
             });
             break;
         case "m.file":
