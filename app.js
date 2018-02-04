@@ -3,6 +3,7 @@ const Discord = require("discord.js");
 const matrixSdk = require("matrix-js-sdk");
 const YAML = require("yamljs");
 const request = require("request");
+const showdown = require("showdown");
 
 const os = require("os");
 const fs = require("fs");
@@ -56,6 +57,17 @@ function isFileImage(filename) {
     }
 }
 
+function sendTextMessageFormatted(client, room, text) {
+    return new Promise((resolve, reject) => {
+        client.sendMessage(room, {
+            body: text,
+            msgtype: "m.text",
+            formatted_body: markdownConverter.makeHtml(text),
+            format: "org.matrix.custom.html"
+        }).done(() => resolve());
+    });
+}
+
 // Program Main ----------------------------------------------------------------------------------------------------------------------------
 
 
@@ -75,6 +87,7 @@ try {
 }
 
 
+const markdownConverter = new showdown.Converter();
 const discordClient = new Discord.Client();
 const matrixClient = matrixSdk.createClient({
     baseUrl: config.matrix.serverURL,
@@ -119,14 +132,23 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
     }
 
     if(oldMember.presence.game == null && newMember.presence.game != null) {
-        matrixClient.sendNotice(config.matrix.room, author + " is now playing " + newMember.presence.game.name);
+        if(newMember.presence.game.type == 2) {
+            matrixClient.sendNotice(config.matrix.room, author + " is now listening to " + newMember.presence.game.name);
+        } else {
+            matrixClient.sendNotice(config.matrix.room, author + " is now playing " + newMember.presence.game.name);
+        }
+
         if(newMember.presence.game.streaming) {
             matrixClient.sendNotice(config.matrix.room, author + " is streaming at " + newMember.presence.game.url);
         }
     }
 
     if(oldMember.presence.game != null && newMember.presence.game == null) {
-        matrixClient.sendNotice(config.matrix.room, author + " has stopped playing " + oldMember.presence.game.name);
+        if(oldMember.presence.game.type == 2) {
+            matrixClient.sendNotice(config.matrix.room, author + " has stopped listening to " + oldMember.presence.game.name);
+        } else {
+            matrixClient.sendNotice(config.matrix.room, author + " has stopped playing " + oldMember.presence.game.name)
+        }
     }
 
     if(oldMember.presence.game != null && newMember.presence.game != null) {
@@ -152,7 +174,7 @@ discordClient.on("guildBanRemove", (guild, user) => {
 
 discordClient.on("guildUnavailable", (guild) => {
     if(guild.id == config.discord.guild) {
-        matrixClient.sendTextMessage(config.matrix.room, "WARNING: The guild I'm bridging to is unavailable, probably due to a server outage.");
+        sendTextMessageFormatted(matrixClient, config.matrix.room, "**WARNING: The guild I'm bridging to is unavailable, probably due to a server outage.**")
     }
 });
 
@@ -194,13 +216,13 @@ discordClient.on("message", message => {
                     content.info.h = attachment.height;
                 }
 
-                matrixClient.sendTextMessage(config.matrix.room, author + (isFileImage(attachment.filename) ? " sent an image:" : " uploaded a file:")).done(() => {
+                sendTextMessageFormatted(matrixClient, config.matrix.room, "**" + author + "** " + (isFileImage(attachment.filename) ? "***sent an image***:" : "***uploaded a file:***")).then(() => {
                     matrixClient.sendMessage(config.matrix.room, content).done(() => fs.unlinkSync(downloadedLocation));
                 });
             });
         });
     } else {
-        matrixClient.sendTextMessage(config.matrix.room, author + ": " + message.cleanContent);
+        sendTextMessageFormatted(matrixClient, config.matrix.room, "**" + author + ":** " + message.cleanContent);
     }
 });
 
