@@ -68,6 +68,17 @@ function sendTextMessageFormatted(client, room, text) {
     });
 }
 
+function sendNoticeFormatted(client, room, text) {
+    return new Promise((resolve, reject) => {
+        client.sendMessage(room, {
+            body: text,
+            msgtype: "m.notice",
+            formatted_body: markdownConverter.makeHtml(text),
+            format: "org.matrix.custom.html"
+        }).done(() => resolve());
+    });
+}
+
 // Program Main ----------------------------------------------------------------------------------------------------------------------------
 
 
@@ -128,34 +139,31 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
     let author = oldMember.nickname == null ? oldMember.user.username : oldMember.nickname;
 
     if(oldMember.presence.status !== newMember.presence.status) {
-        matrixClient.sendNotice(config.matrix.room, author + " is now " + (newMember.presence.status == "dnd" ? "on Do Not Disturb" : newMember.presence.status));
+        sendNoticeFormatted(matrixClient, config.matrix.room, "**" + author + "** is now **" + (newMember.presence.status == "dnd" ? "on Do Not Disturb" : newMember.presence.status) + "**");
     }
 
     if(oldMember.presence.game == null && newMember.presence.game != null) {
         if(newMember.presence.game.type == 2) {
-            matrixClient.sendNotice(config.matrix.room, author + " is now listening to " + newMember.presence.game.name);
+            sendNoticeFormatted(matrixClient, config.matrix.room, "**" + author + "** is now listening to ***" + newMember.presence.game.name + "***");
         } else {
-            matrixClient.sendNotice(config.matrix.room, author + " is now playing " + newMember.presence.game.name);
-        }
-
-        if(newMember.presence.game.streaming) {
-            matrixClient.sendNotice(config.matrix.room, author + " is streaming at " + newMember.presence.game.url);
+            if(newMember.presence.game.streaming) {
+                sendNoticeFormatted(matrixClient, config.matrix.room, "**" + author + "** is now playing ***" + newMember.presence.game.name + "*** and **streaming at:** " + newMember.presence.game.url);
+            } else {
+                sendNoticeFormatted(matrixClient, config.matrix.room, "**" + author + "** is now playing ***" + newMember.presence.game.name + "***");
+            }
         }
     }
 
     if(oldMember.presence.game != null && newMember.presence.game == null) {
-        if(oldMember.presence.game.type == 2) {
-            matrixClient.sendNotice(config.matrix.room, author + " has stopped listening to " + oldMember.presence.game.name);
-        } else {
-            matrixClient.sendNotice(config.matrix.room, author + " has stopped playing " + oldMember.presence.game.name)
-        }
+        let listening = oldMember.presence.game.type == 2;
+        sendNoticeFormatted(matrixClient, config.matrix.room, "**" + author + "** has " + (listening ? "stopped listening to" : "stopped playing") + " ***" + oldMember.presence.game.name + "***");
     }
 
     if(oldMember.presence.game != null && newMember.presence.game != null) {
         if(oldMember.presence.game.streaming && !newMember.presence.game.streaming) {
-            matrixClient.sendNotice(config.matrix.room, author + " has stopped streaming");
+            sendNoticeFormatted(matrixClient, config.matrix.room, "**" + author + "** has **stopped streaming**");
         } else if(!oldMember.presence.game.streaming && newMember.presence.game.streaming){
-            matrixClient.sendNotice(config.matrix.room, author + " has started streaming at " + newMember.presence.game.url);
+            sendNoticeFormatted(matrixClient, config.matrix.room, "**" + author + "** has **started streaming at:** " + newMember.presence.game.url);
         }
     }
 });
@@ -163,13 +171,13 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
 discordClient.on("guildBanAdd", (guild, user) => {
     if(guild.id != config.discord.guild) return;
 
-    matrixClient.sendNotice(config.matrix.room, user.username + " was banned.");
+    sendNoticeFormatted(matrixClient, config.matrix.room, "**" + user.username + "** ***was banned!***");
 });
 
 discordClient.on("guildBanRemove", (guild, user) => {
     if(guild.id != config.discord.guild) return;
 
-    matrixClient.sendNotice(config.matrix.room, user.username + " was unbanned.");
+    sendNoticeFormatted(matrixClient, config.matrix.room, "**" + user.username + "** ***was unbanned!***");
 });
 
 discordClient.on("guildUnavailable", (guild) => {
@@ -179,7 +187,7 @@ discordClient.on("guildUnavailable", (guild) => {
 });
 
 discordClient.on("reconnecting", () => {
-    matrixClient.sendNotice(config.matrix.room, "BOT: Reconnecting to discord...");
+    sendNoticeFormatted(matrixClient, config.matrix.room, "**BOT: Reconnecting to discord...**");
 });
 
 discordClient.on("message", message => {
@@ -341,7 +349,7 @@ matrixClient.on("RoomMember.membership", (event, member, oldMembership) => {
             discordChannel.send("***" + event.getSender() + "*** **has joined the room**");
             break;
         case "leave":
-            discordChannel.send("***" + event.getSender() + "*** **has left the room**");
+            discordChannel.send("***" + event.target.userId + "*** **has left the room**");
             break;
         case "ban":
             discordChannel.send("***" + event.target.userId + "*** **has been banned by** ***" + event.getSender() +"*** from the room**");
