@@ -1,0 +1,10 @@
+discord:
+    token: ""
+matrix:
+    serverURL: 'https:/ajann.xyz'
+    domain: ajann.xyz
+mappings:
+    -
+        discordGuild: "267119038075895808"
+        discordChannel: "270720288809811970"
+        matrixRoom: ""
