@@ -42,7 +42,7 @@ function downloadFromMatrix(matrixFileUrlPart, filename, callback) {
 }
 
 function isFileImage(filename) {
-    let ext = path.extname(filename);
+    let ext = path.extname(filename).toLowerCase();
     switch(ext) {
         case ".png":
         case ".jpg":
@@ -115,10 +115,12 @@ discordClient.on("ready", () => {
     console.log("Discord Client Ready.");
     discordGuild = discordClient.guilds.get(config.discord.guild);
     discordChannel = discordGuild.channels.get(config.discord.channel);
+
+    sendNoticeFormatted(matrixClient, config.matrix.room, "BOT: Connected to discord.");
 });
 
 discordClient.on("channelPinsUpdate", (channel, time) => {
-    matrixClient.sendNotice(config.matrix.room, "Someone pinned/unpinned a new message in the channel.");
+    sendNoticeFormatted(matrixClient, config.matrix.room, "**Someone** ***pinned/unpinned a new message in the channel.***");
 });
 
 discordClient.on("guildMemberAdd", (member) => {
