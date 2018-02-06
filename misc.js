@@ -1,3 +1,6 @@
+const showdown = require("showdown");
+const markdownConverter = new showdown.Converter();
+
 function download(url, filename, callback) {
     request.head(url, (err, res, body) => {
         let downloadedLocation = path.join(tempDir, filename)
@@ -28,26 +31,22 @@ function isFileImage(filename) {
     }
 }
 
-function sendTextMessageFormatted(client, room, text) {
-    return new Promise((resolve, reject) => {
-        client.sendMessage(room, {
-            body: text,
-            msgtype: "m.text",
-            formatted_body: markdownConverter.makeHtml(text),
-            format: "org.matrix.custom.html"
-        }).done(() => resolve());
-    });
+function getTextMessageFormatted(text) {
+    return {
+        body: text,
+        msgtype: "m.text",
+        formatted_body: markdownConverter.makeHtml(text),
+        format: "org.matrix.custom.html"
+    };
 }
 
-function sendNoticeFormatted(client, room, text) {
-    return new Promise((resolve, reject) => {
-        client.sendMessage(room, {
-            body: text,
-            msgtype: "m.notice",
-            formatted_body: markdownConverter.makeHtml(text),
-            format: "org.matrix.custom.html"
-        }).done(() => resolve());
-    });
+function getNoticeFormatted(text) {
+    return {
+        body: text,
+        msgtype: "m.notice",
+        formatted_body: markdownConverter.makeHtml(text),
+        format: "org.matrix.custom.html"
+    };
 }
 
 module.exports.download = download;

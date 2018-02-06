@@ -1,3 +1,4 @@
+const Discord = require("discord.js");
 const YAML = require("yamljs");
 
 const os = require("os");
@@ -54,14 +55,22 @@ for(let i = 0; i < config.mappings.length; i++) {
     discordMappings.set(config.mappings[i].discordChannel, config.mappings[i].matrixRoom);
 }
 
-console.log(config);
-
+const discordClient = new Discord.Client();
 const Cli = require("matrix-appservice-bridge").Cli;
 const Bridge = require("matrix-appservice-bridge").Bridge;
 const AppServiceRegistration = require("matrix-appservice-bridge").AppServiceRegistration;
 const localPart = "_discordBridgeService";
-
+var bridge;
 var botId;
+
+discordClient.on("ready", () => {
+    for(let i = 0; i < matrixMappings.size; i++) {
+        let room = matrixMappings.keys().next().value;
+        bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).sendMessage(room, misc.getNoticeFormatted("**Connected to Discord**"));
+    }
+});
+
+discordClient.login(config.discord.token);
 
 new Cli({
     registrationPath: "discord-bridge-registration.yml",
@@ -95,8 +104,8 @@ new Cli({
                                     // Room is in mappings, join ourselves and then the Bridge Service account
                                     bridge.getIntent().join(event.room_id).then(() => {
                                         bridge.getIntent("@" + localPart + ":" + config.matrix.domain).join(event.room_id).then(() => {
+                                            bridge.getIntent().invite(event.room_id, "@discord_BridgeService:" + config.matrix.domain).then(() => { bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).join(event.room_id)});
                                             bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).setDisplayName("Discord Bridge Service");
-                                            bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).setAvatarUrl("https://cdn0.iconfinder.com/data/icons/free-social-media-set/24/discord-512.png");
                                         });
                                     });
                                 }
