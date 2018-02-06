@@ -70,6 +70,20 @@ discordClient.on("ready", () => {
     }
 });
 
+discordClient.on("message", message => {
+    if(message.author.username === config.discord.username) return;
+    if((message.content == null || message.content == "") && message.attachments.size == 0) return;
+    if(!discordMappings.has(message.channel.id)) return;
+
+    let author = message.member.nickname == null ? message.author.username : message.member.nickname;
+
+    if(message.attachments.size > 0) {
+        //todo
+    } else {
+        bridge.getIntent("@discord_"+message.author.username+":"+config.matrix.domain).sendMessage(room, misc.getTextMessageFormatted(message.cleanContent));
+    }
+});
+
 discordClient.login(config.discord.token);
 
 new Cli({
