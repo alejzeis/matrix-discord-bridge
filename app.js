@@ -95,7 +95,7 @@ new Cli({
         console.log("Matrix appservice listening on port %s", port);
         bridge.run(port, config);
 
-        bridge.getClient().getProfileInfo("@DiscordBridgeService:" + config.matrix.domain, "displayname").then((data) => {
+        bridge.getIntent().getProfileInfo("@DiscordBridgeService:" + config.matrix.domain, "displayname").then((data) => {
             // Ignore
         }).catch((err) => {
             // We dont have a display name, set one!
