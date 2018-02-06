@@ -51,6 +51,8 @@ const Cli = require("matrix-appservice-bridge").Cli;
 const Bridge = require("matrix-appservice-bridge").Bridge;
 const AppServiceRegistration = require("matrix-appservice-bridge").AppServiceRegistration;
 
+var botId;
+
 new Cli({
     registrationPath: "discord-bridge-registration.yml",
     generateRegistration: function(reg, callback) {
@@ -73,7 +75,16 @@ new Cli({
                 },
 
                 onEvent: function(request, context) {
-                    var event = request.getData();
+                    let event = request.getData();
+
+                    switch(event.type) {
+                        case "m.room.member":
+                            if(event.content.membership == "invite" && event.state_key == "@DiscordBridgeService:" + config.matrix.domain) {
+                                bridge.getIntent().join(event.room_id);
+                            }
+                            break;
+                    }
+
                     if (event.type !== "m.room.message" || !event.content || event.room_id !== ROOM_ID) {
                         return;
                     }
@@ -83,5 +94,10 @@ new Cli({
         });
         console.log("Matrix appservice listening on port %s", port);
         bridge.run(port, config);
+
+        botId = bridge.getClient().getUserId();
+        bridge.getClient().getProfileInfo(botId, "displayname").done((data) => {
+            console.log(data);
+        });
     }
 }).run();
