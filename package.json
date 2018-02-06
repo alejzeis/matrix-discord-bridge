@@ -20,6 +20,7 @@
     "discord.js": "^11.3.0",
     "matrix-appservice-bridge": "^1.4.0-a",
     "request": "^2.83.0",
+    "showdown": "^1.8.6",
     "yamljs": "^0.3.0"
   }
 }

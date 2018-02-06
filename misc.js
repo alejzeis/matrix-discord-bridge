@@ -52,5 +52,5 @@ function getNoticeFormatted(text) {
 module.exports.download = download;
 module.exports.downloadFromMatrix = downloadFromMatrix;
 module.exports.isFileImage = isFileImage;
-module.exports.sendTextMessageFormatted = sendTextMessageFormatted;
-module.exports.sendNoticeFormatted = sendNoticeFormatted;
+module.exports.getTextMessageFormatted = getTextMessageFormatted;
+module.exports.getNoticeFormatted = getNoticeFormatted;
