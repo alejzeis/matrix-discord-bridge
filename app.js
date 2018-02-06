@@ -114,11 +114,6 @@ new Cli({
                             // TODO: process other events
                             break;
                     }
-
-                    if (event.type !== "m.room.message" || !event.content || event.room_id !== ROOM_ID) {
-                        return;
-                    }
-                    console.log(event.user_id + " | " + event.content.body);
                 }
             }
         });
