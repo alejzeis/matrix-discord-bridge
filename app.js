@@ -45,11 +45,21 @@ try {
     process.exit(1);
 }
 
+// Create maps of matrix and discord channel and room corralations for easier and faster lookups.
+let matrixMappings = new Map();
+let discordMappings = new Map();
+
+for(let i = 0; i < config.mappings.length; i++) {
+    matrixMappings.set(config.mappings[i].matrixRoom, {guild: config.mappings[i].discordGuild, channel: config.mappings[i].discordChannel});
+    discordMappings.set(config.mappings[i].discordChannel, config.mappings[i].matrixRoom);
+}
+
 console.log(config);
 
 const Cli = require("matrix-appservice-bridge").Cli;
 const Bridge = require("matrix-appservice-bridge").Bridge;
 const AppServiceRegistration = require("matrix-appservice-bridge").AppServiceRegistration;
+const localPart = "_discordBridgeService";
 
 var botId;
 
@@ -59,7 +69,7 @@ new Cli({
         reg.setId(AppServiceRegistration.generateToken());
         reg.setHomeserverToken(AppServiceRegistration.generateToken());
         reg.setAppServiceToken(AppServiceRegistration.generateToken());
-        reg.setSenderLocalpart("DiscordBridgeService");
+        reg.setSenderLocalpart(localPart);
         reg.addRegexPattern("users", "@discord_.*", true);
         callback(reg);
     },
@@ -79,13 +89,20 @@ new Cli({
 
                     switch(event.type) {
                         case "m.room.member":
-                            if(event.content.membership == "invite" && event.state_key == "@DiscordBridgeService:" + config.matrix.domain) {
-                                bridge.getIntent().join(event.room_id).then(() => {
-                                    bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).join(event.room_id).then(() => {
-                                        bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).setDisplayName("Discord Bridge Service");
+                            if(event.content.membership == "invite" && event.state_key == "@" + localPart + ":" + config.matrix.domain) {
+                                // Check if the room is found in our mappings
+                                if(matrixMappings.has(event.room_id)) {
+                                    // Room is in mappings, join ourselves and then the Bridge Service account
+                                    bridge.getIntent().join(event.room_id).then(() => {
+                                        bridge.getIntent("@" + localPart + ":" + config.matrix.domain).join(event.room_id).then(() => {
+                                            bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).setDisplayName("Discord Bridge Service");
+                                            bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).setAvatarUrl("https://cdn0.iconfinder.com/data/icons/free-social-media-set/24/discord-512.png");
+                                        });
                                     });
-                                });
+                                }
                             }
+
+                            // TODO: process other events
                             break;
                     }
 
