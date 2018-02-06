@@ -80,7 +80,11 @@ new Cli({
                     switch(event.type) {
                         case "m.room.member":
                             if(event.content.membership == "invite" && event.state_key == "@DiscordBridgeService:" + config.matrix.domain) {
-                                bridge.getIntent().join(event.room_id);
+                                bridge.getIntent().join(event.room_id).then(() => {
+                                    bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).join(event.room_id).then(() => {
+                                        bridge.getIntent("@discord_BridgeService:" + config.matrix.domain).setDisplayName("Discord Bridge Service");
+                                    });
+                                });
                             }
                             break;
                     }
@@ -94,12 +98,5 @@ new Cli({
         });
         console.log("Matrix appservice listening on port %s", port);
         bridge.run(port, config);
-
-        bridge.getIntent().getProfileInfo("@DiscordBridgeService:" + config.matrix.domain, "displayname").then((data) => {
-            // Ignore
-        }).catch((err) => {
-            // We dont have a display name, set one!
-            bridge.getIntent().setDisplayName("Discord Bridge Service");
-        });
     }
 }).run();
