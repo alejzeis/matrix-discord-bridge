@@ -38,4 +38,7 @@ jspm_packages
 
 
 # Bot Configuration File
-bridgeBot.yml
+bridgeConfiguration.yml
+discord-bridge-registration.yml
+
+*.db

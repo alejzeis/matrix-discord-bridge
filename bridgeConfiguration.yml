@@ -1,7 +1,7 @@
 discord:
     token: ""
 matrix:
-    serverURL: 'https:/ajann.xyz'
+    serverURL: 'http://10.8.0.1:8008'
     domain: ajann.xyz
 mappings:
     -

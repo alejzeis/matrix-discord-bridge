@@ -45,6 +45,8 @@ try {
     process.exit(1);
 }
 
+console.log(config);
+
 const Cli = require("matrix-appservice-bridge").Cli;
 const Bridge = require("matrix-appservice-bridge").Bridge;
 const AppServiceRegistration = require("matrix-appservice-bridge").AppServiceRegistration;
@@ -52,14 +54,14 @@ const AppServiceRegistration = require("matrix-appservice-bridge").AppServiceReg
 new Cli({
     registrationPath: "discord-bridge-registration.yml",
     generateRegistration: function(reg, callback) {
+        reg.setId(AppServiceRegistration.generateToken());
         reg.setHomeserverToken(AppServiceRegistration.generateToken());
         reg.setAppServiceToken(AppServiceRegistration.generateToken());
         reg.setSenderLocalpart("DiscordBridgeService");
         reg.addRegexPattern("users", "@discord_.*", true);
         callback(reg);
     },
-    run: function(port, config) {
-        /*
+    run: function(port, cfg) {
         bridge = new Bridge({
             homeserverUrl: config.matrix.serverURL,
             domain: config.matrix.domain,
@@ -80,6 +82,6 @@ new Cli({
             }
         });
         console.log("Matrix appservice listening on port %s", port);
-        bridge.run(port, config);*/
+        bridge.run(port, config);
     }
 }).run();
