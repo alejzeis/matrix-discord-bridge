@@ -19,8 +19,11 @@
   "dependencies": {
     "discord.js": "^11.3.0",
     "matrix-appservice-bridge": "^1.4.0-a",
+    "matrix-js-sdk": "^0.9.2",
+    "mime": "^2.2.0",
     "request": "^2.83.0",
     "showdown": "^1.8.6",
+    "uuid": "^3.2.1",
     "yamljs": "^0.3.0"
   }
 }
