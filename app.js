@@ -247,16 +247,16 @@ matrixModule.doBridgeAccount(config, matrixMappings, (room) => {
 
     if(typingMappings.has(room)) {
         let prev = typingMappings.get(room);
-        prev.matrix = prev.matrix + 1;
+        prev = prev + 1;
 
-        if(prev.matrix == 1) {
+        if(prev == 1) {
             channel.startTyping();
         }
 
         typingMappings.set(room, prev);
 
     } else {
-        typingMappings.set(room, { matrix: 1, discord: 0 });
+        typingMappings.set(room, 1);
         channel.startTyping();
     }
 }, (room) => {
@@ -269,8 +269,9 @@ matrixModule.doBridgeAccount(config, matrixMappings, (room) => {
 
     if(typingMappings.has(room)) {
         let prev = typingMappings.get(room);
-        if((prev.matrix - 1) <= 0) {
-            prev.matrix = 0
+        prev = prev - 1;
+        if(prev <= 0) {
+            prev = 0;
             channel.stopTyping();
         }
 
