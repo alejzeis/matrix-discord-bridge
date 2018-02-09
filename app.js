@@ -99,8 +99,6 @@ discordClient.on("ready", () => {
                 continue;
             } else users.push(member.user.username);
 
-            if(!config.initalSyncAvatars) continue;
-
             // Check and set presence
             let matrixPresence;
             switch(member.presence.status) {
@@ -118,6 +116,8 @@ discordClient.on("ready", () => {
             }
             console.log("set " + member.user.username + " to " + matrixPresence);
             memberIntent.getClient().setPresence(matrixPresence);
+
+            if(!config.initalSyncAvatars) continue;
 
             // Set avatars
             let url = member.user.avatarURL;
@@ -159,6 +159,20 @@ discordClient.on("message", message => {
             intent.sendMessage(room, misc.getTextMessageFormatted(message.cleanContent));
         });
     }
+});
+
+discordClient.on("typingStart", (channel, user) => {
+    if(user == config.discord.username) return;
+    if(!discordMappings.has(channel.id)) return;
+
+    bridge.getIntent("@discord_"+user.username+":"+config.matrix.domain).sendTyping(discordMappings.get(channel.id), true);
+});
+
+discordClient.on("typingStop", (channel, user) => {
+    if(user == config.discord.username) return;
+    if(!discordMappings.has(channel.id)) return;
+
+    bridge.getIntent("@discord_"+user.username+":"+config.matrix.domain).sendTyping(discordMappings.get(channel.id), false);
 });
 
 discordClient.login(config.discord.token);
@@ -249,22 +263,26 @@ new Cli({
                             if(event.sender == config.matrix.bridgeAccount.userId) return;
 
                             let channel = discordClient.guilds.get(matrixMappings.get(event.room_id).guild).channels.get(matrixMappings.get(event.room_id).channel);
+                            let isFile = false;
                             switch(event.content.msgtype) {
                                 case "m.text":
                                     channel.send("**" + event.sender + "**: " + event.content.body);
                                     break;
+                                case "m.file":
+                                    isFile = true;
                                 case "m.image":
                                     // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
                                     if(event.content.info.size >= (1024*1024*8)) {
                                         // File is too big, send link then
-                                        channel.send("**" + event.sender + "**: ***Sent an image:*** " + config.matrix.serverURL + "/_matrix/media/v1/download/" + event.content.url.replace("mxc://", ""));
+                                        channel.send("**" + event.sender + "**: ***Sent " + (isFile ? "a file" : "an image") + ":*** " + config.matrix.serverURL + "/_matrix/media/v1/download/" + event.content.url.replace("mxc://", ""));
                                     } else {
                                         misc.downloadFromMatrix(config, event.content.url.replace("mxc://", ""), event.content.body, (mimeType, downloadedLocation) => {
-                                            channel.send("**" + event.sender + "**: ***Sent an image:*** *" + event.content.body + "*", new Discord.Attachment(downloadedLocation, event.content.body))
+                                            channel.send("**" + event.sender + "**: ***Sent " + (isFile ? "a file" : "an image") + ":*** " + event.content.body + "*", new Discord.Attachment(downloadedLocation, event.content.body))
                                                 .then(() => fs.unlinkSync(downloadedLocation));
                                                 // Delete the image we downloaded after we uploaded it
                                         });
                                     }
+                                    break;
                             }
                             break;
                     }

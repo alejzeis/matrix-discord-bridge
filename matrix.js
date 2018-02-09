@@ -21,6 +21,9 @@ function doBridgeAccount(config, mappings, typingStartCb, typingStopCb) {
             // Add 2000 to adjust for latency
             if(event.getTs()+2000 < currentTime) return;
 
+            // Check if they're a bridged user
+            if(member.userId.startsWith("@discord_")) return;
+
             if(member.typing) {
                 typingStartCb(member.roomId);
             } else {
