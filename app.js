@@ -195,7 +195,7 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
     let channels = guildMappings.get(oldMember.guild.id);
     console.log(channels);
     for(let i = 0; i < channels.length; i++) {
-        if(newMember.permissionsIn(channels[i]).has(discord.Permissions.FLAGS.VIEW_CHANNEL)) {
+        if(newMember.permissionsIn(channels[i]).has(Discord.Permissions.FLAGS.VIEW_CHANNEL)) {
             console.log(discordMappings.get(channels[i]));
             allRooms.push(discordMappings.get(channels[i]));
         }
