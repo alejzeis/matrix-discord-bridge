@@ -422,16 +422,45 @@ new Cli({
                     let event = request.getData();
 
                     console.log(event.type);
+                    var channel;
                     switch(event.type) {
                         case "m.room.member":
-                            if(event.content.membership == "invite" && event.state_key == "@" + localPart + ":" + config.matrix.domain) {
-                                // Check if the room is found in our mappings
-                                if(matrixMappings.has(event.room_id)) {
-                                    // Room is in mappings, join ourselves and then the Bridge Service account
-                                    bridge.getIntent().join(event.room_id).then(() => {
-                                        bridge.getIntent().invite(event.room_id, config.matrix.bridgeAccount.userId);
-                                    });
-                                }
+                            if(event.age >= 5000) return;
+                            if(event.sender == config.matrix.bridgeAccount.userId) return;
+                            // Check if the room is found in our mappings
+                            if(!matrixMappings.has(event.room_id)) return;
+
+                            let discordInfo = matrixMappings.get(event.room_id);
+                            channel = discordClient.guilds.get(discordInfo.guild).channels.get(discordInfo.channel);
+
+                            switch(event.content.membership) {
+                                case "invite":
+                                    if(event.state_key == "@" + localPart + ":" + config.matrix.domain) {
+                                        // join ourselves and then the Bridge Service account
+                                        bridge.getIntent().join(event.room_id).then(() => {
+                                            bridge.getIntent().invite(event.room_id, config.matrix.bridgeAccount.userId);
+                                        });
+                                    } else {
+                                        channel.send("***" + event.state_key + "*** **invited to room by** ***" + event.sender + "***");
+                                    }
+                                    break;
+                                case "join":
+                                case "leave":
+                                case "ban":
+                                    // We dont want echo from appservice users being banned
+                                    if(event.state_key.startsWith("@discord_")) return;
+                                case "join":
+                                    channel.send("***" + event.state_key + "*** **joined the room**");
+                                    break;
+                                case "leave":
+                                    channel.send("***" + event.state_key + "*** **left the room**");
+                                    break;
+                                case "ban":
+                                    // We dont want echo from appservice users being banned
+                                    if(event.state_key.startsWith("@discord_")) return;
+
+                                    channel.send("***" + event.state_key + "*** **banned from room by** ***" + event.sender + "***");
+                                    break;
                             }
 
                             // TODO: process other events
@@ -440,7 +469,7 @@ new Cli({
                             if(event.age >= 5000) return;
                             if(event.sender == config.matrix.bridgeAccount.userId) return;
 
-                            let channel = discordClient.guilds.get(matrixMappings.get(event.room_id).guild).channels.get(matrixMappings.get(event.room_id).channel);
+                            channel = discordClient.guilds.get(matrixMappings.get(event.room_id).guild).channels.get(matrixMappings.get(event.room_id).channel);
                             let isFile = false;
                             switch(event.content.msgtype) {
                                 case "m.text":
