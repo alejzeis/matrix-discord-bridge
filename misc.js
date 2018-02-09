@@ -83,9 +83,16 @@ function getNoticeFormatted(text) {
     };
 }
 
+function intentSendMessageToRooms(intent, rooms, message) {
+    for(let i = 0; i < rooms.length; i++) {
+        intent.sendMessage(rooms[i], message);
+    }
+}
+
 module.exports.download = download;
 module.exports.downloadFromMatrix = downloadFromMatrix;
 module.exports.isFileImage = isFileImage;
 module.exports.getFileOrImageUploadContent = getFileOrImageUploadContent;
 module.exports.getTextMessageFormatted = getTextMessageFormatted;
 module.exports.getNoticeFormatted = getNoticeFormatted;
+module.exports.intentSendMessageToRooms = intentSendMessageToRooms;

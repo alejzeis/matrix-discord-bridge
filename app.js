@@ -56,10 +56,19 @@ try {
 // Create maps of matrix and discord channel and room corralations for easier and faster lookups.
 let matrixMappings = new Map();
 let discordMappings = new Map();
+let guildMappings = new Map();
 
 for(let i = 0; i < config.mappings.length; i++) {
     matrixMappings.set(config.mappings[i].matrixRoom, {guild: config.mappings[i].discordGuild, channel: config.mappings[i].discordChannel});
     discordMappings.set(config.mappings[i].discordChannel, config.mappings[i].matrixRoom);
+
+    if(guildMappings.has(config.mappings[i].discordGuild)) {
+        let guild = guildMappings.get(config.mappings[i].discordGuild);
+        guild.push(config.mappings[i].discordChannel);
+        guildMappings.set(config.mappings[i].discordGuild, guild);
+    } else {
+        guildMappings.set(config.mappings[i].discordGuild, [config.mappings[i].discordChannel]);
+    }
 }
 
 const discordClient = new Discord.Client();
@@ -162,17 +171,69 @@ discordClient.on("message", message => {
 });
 
 discordClient.on("typingStart", (channel, user) => {
-    if(user == config.discord.username) return;
+    if(user.username == config.discord.username) return;
     if(!discordMappings.has(channel.id)) return;
 
     bridge.getIntent("@discord_"+user.username+":"+config.matrix.domain).sendTyping(discordMappings.get(channel.id), true);
 });
 
 discordClient.on("typingStop", (channel, user) => {
-    if(user == config.discord.username) return;
+    if(user.username == config.discord.username) return;
     if(!discordMappings.has(channel.id)) return;
 
     bridge.getIntent("@discord_"+user.username+":"+config.matrix.domain).sendTyping(discordMappings.get(channel.id), false);
+});
+
+discordClient.on("presenceUpdate", (oldMember, newMember) => {
+    if(!guildMappings.has(oldMember.guild.id)) return;
+
+    let author = oldMember.nickname == null ? oldMember.user.username : oldMember.nickname;
+    let intent = bridge.getIntent("@discord_"+oldMember.user.username+":"+config.matrix.domain);
+
+    // Get the list of all matrix rooms this person is in
+    let allRooms = [];
+    let channels = guildMappings.get(oldMember.guild.id);
+    console.log(channels);
+    for(let i = 0; i < channels.length; i++) {
+        console.log(discordMappings.get(channels[i]));
+        allRooms.push(discordMappings.get(channels[i]));
+    }
+
+    console.log(allRooms);
+
+    if(oldMember.presence.status !== newMember.presence.status) {
+        if(newMember.presence.status == "dnd" || newMember.presence.status == "idle") {
+            misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Is now **" + (newMember.presence.status == "dnd" ? "on Do Not Disturb" : newMember.presence.status) + "**"));
+            intent.getClient().setPresence("offline");
+        } else {
+            intent.getClient().setPresence(newMember.presence.status == "online" ? "online" : "offline");
+        }
+    }
+
+    if(oldMember.presence.game == null && newMember.presence.game != null) {
+        if(newMember.presence.game.type == 2) {
+            misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Is now listening to ***" + newMember.presence.game.name + "***"));
+        } else {
+            if(newMember.presence.game.streaming) {
+                misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Is now playing ***" + newMember.presence.game.name + "*** and **streaming at:** " + newMember.presence.game.url));
+            } else {
+                misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Is now playing ***" + newMember.presence.game.name + "***"));
+            }
+        }
+    }
+
+    if(oldMember.presence.game != null && newMember.presence.game == null) {
+        let listening = oldMember.presence.game.type == 2;
+        misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Has " + (listening ? "stopped listening to" : "stopped playing") + " ***" + oldMember.presence.game.name + "***"));
+    }
+
+    if(oldMember.presence.game != null && newMember.presence.game != null) {
+        if(oldMember.presence.game.streaming && !newMember.presence.game.streaming) {
+            misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Has **stopped streaming**"));
+        } else if(!oldMember.presence.game.streaming && newMember.presence.game.streaming){
+            misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Has **started streaming at:** " + newMember.presence.game.url));
+        }
+    }
 });
 
 discordClient.login(config.discord.token);
@@ -181,8 +242,6 @@ discordClient.login(config.discord.token);
 matrixModule.doBridgeAccount(config, matrixMappings, (room) => {
     // Check if we are bridging that room
     if(!matrixMappings.has(room)) return;
-
-    console.log("Typing detected");
 
     let channel = discordClient.guilds.get(matrixMappings.get(room).guild).channels.get(matrixMappings.get(room).channel);
 

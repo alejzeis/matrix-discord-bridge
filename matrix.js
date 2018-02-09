@@ -65,6 +65,12 @@ function sendMessage(room, message, notice = false) {
     client.sendMessage(room, notice ? misc.getNoticeFormatted(message) : misc.getTextMessageFormatted(message));
 }
 
+function sendMessageToRooms(rooms, message, notice = false) {
+    for(let i = 0; i < rooms.length; i++) {
+        sendMessage(rooms[i], message, notice);
+    }
+}
+
 function uploadContent(stream, filename, mimetype, uploadClient = client) {
     return new Promise((resolve, reject) => {
         uploadClient.uploadContent({
