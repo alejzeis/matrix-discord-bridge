@@ -238,7 +238,51 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
     }
 });
 
-discordClient.login(config.discord.token);
+discordClient.on("channelPinsUpdate", (channel, time) => {
+    if(!discordMappings.has(channel.id)) return;
+    matrixModule.sendMessage(discordMappings.get(channel.id), "**Someone** ***pinned/unpinned a new message in the channel.***");
+});
+
+discordClient.on("guildMemberAdd", (member) => {
+    if(!guildMappings.has(member.guild.id)) return;
+
+    let author = member.nickname == null ? member.user.username : member.nickname;
+    let intent = bridge.getIntent("@discord_"+member.user.username+":"+config.matrix.domain);
+
+    // Get the list of all matrix rooms this person is in
+    let allRooms = misc.getMatrixRoomsForMember(Discord, member, discordMappings, guildMappings);
+
+    for(let i = 0; i < allRooms.length; i++) {
+        bridge.getIntent().invite(allRooms[i], "@discord_"+member.user.username+":"+config.matrix.domain).then(() => {
+            intent.join(allRooms[i]);
+            intent.setDisplayName(author);
+
+            let url = member.user.avatarURL;
+            if(url != null && url != "") {
+                let filename = uuidv1() + ".png";
+                misc.download(url, filename, (mimetype, downloadedLocation) => {
+                    matrixModule.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype, bridge.getIntent().getClient()).then((url) => {
+                        fs.unlinkSync(downloadedLocation);
+                        intent.setAvatarUrl(url);
+                    });
+                });
+            }
+        });
+    }
+});
+
+discordClient.on("guildMemberRemove", (member) => {
+    if(!guildMappings.has(member.guild.id)) return;
+
+    let intent = bridge.getIntent("@discord_"+member.user.username+":"+config.matrix.domain);
+
+    // Get the list of all matrix rooms this person is in
+    let allRooms = misc.getMatrixRoomsForMember(Discord, member, discordMappings, guildMappings);
+
+    for(let i = 0; i < allRooms.length; i++) {
+        intent.leave(allRooms[i]);
+    }
+});
 
 // Handle typing from matrix side
 matrixModule.doBridgeAccount(config, matrixMappings, (room) => {
@@ -355,3 +399,5 @@ new Cli({
         bridge.run(port, config);
     }
 }).run();
+
+discordClient.login(config.discord.token);

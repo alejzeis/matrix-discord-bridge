@@ -89,6 +89,20 @@ function intentSendMessageToRooms(intent, rooms, message) {
     }
 }
 
+function getMatrixRoomsForMember(Discord, member, discordMappings, guildMappings) {
+    // Get the list of all matrix rooms this person is in
+    let allRooms = [];
+    let channels = guildMappings.get(member.guild.id);
+    console.log(channels);
+    for(let i = 0; i < channels.length; i++) {
+        if(member.permissionsIn(channels[i]).has(Discord.Permissions.FLAGS.VIEW_CHANNEL)) {
+            console.log(discordMappings.get(channels[i]));
+            allRooms.push(discordMappings.get(channels[i]));
+        }
+    }
+    return allRooms;
+}
+
 module.exports.download = download;
 module.exports.downloadFromMatrix = downloadFromMatrix;
 module.exports.isFileImage = isFileImage;
@@ -96,3 +110,4 @@ module.exports.getFileOrImageUploadContent = getFileOrImageUploadContent;
 module.exports.getTextMessageFormatted = getTextMessageFormatted;
 module.exports.getNoticeFormatted = getNoticeFormatted;
 module.exports.intentSendMessageToRooms = intentSendMessageToRooms;
+module.exports.getMatrixRoomsForMember = getMatrixRoomsForMember;
