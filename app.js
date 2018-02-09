@@ -254,19 +254,20 @@ discordClient.on("guildMemberAdd", (member) => {
 
     for(let i = 0; i < allRooms.length; i++) {
         bridge.getIntent().invite(allRooms[i], "@discord_"+member.user.username+":"+config.matrix.domain).then(() => {
-            intent.join(allRooms[i]);
-            intent.setDisplayName(author);
-
-            let url = member.user.avatarURL;
-            if(url != null && url != "") {
-                let filename = uuidv1() + ".png";
-                misc.download(url, filename, (mimetype, downloadedLocation) => {
-                    matrixModule.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype, bridge.getIntent().getClient()).then((url) => {
-                        fs.unlinkSync(downloadedLocation);
-                        intent.setAvatarUrl(url);
-                    });
+            intent.join(allRooms[i]).then(() =>  {
+            intent.setDisplayName(author).then(() => {
+                    let url = member.user.avatarURL;
+                    if(url != null && url != "") {
+                        let filename = uuidv1() + ".png";
+                        misc.download(url, filename, (mimetype, downloadedLocation) => {
+                            matrixModule.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype, bridge.getIntent().getClient()).then((url) => {
+                                fs.unlinkSync(downloadedLocation);
+                                intent.setAvatarUrl(url);
+                            });
+                        });
+                    }
                 });
-            }
+            });
         });
     }
 });
