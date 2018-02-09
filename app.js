@@ -434,6 +434,9 @@ new Cli({
                                             bridge.getIntent().invite(event.room_id, config.matrix.bridgeAccount.userId);
                                         });
                                     } else {
+                                        // We dont want echo from appservice users being banned
+                                        if(event.state_key.startsWith("@discord_")) return;
+                                        
                                         channel.send("***" + event.state_key + "*** **invited to room by** ***" + event.sender + "***");
                                     }
                                     break;
