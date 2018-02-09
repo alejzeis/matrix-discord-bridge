@@ -143,6 +143,22 @@ discordClient.on("ready", () => {
     }
 });
 
+discordClient.on("guildUnavailable", (guild) => {
+    if(!guildMappings.has(guild.id)) return;
+
+    let array = guildMappings.keys();
+    for(let i = 0; i < array.size; i++) {
+        matrixModule.sendMessage(discordMappings.get(array.next().value), "**Guild Temporarily ***UNAVAILABLE***, possible server outage**", false);
+    }
+});
+
+discordClient.on("reconnecting", () => {
+    let array = matrixMappings.keys();
+    for(let i = 0; i < array.size; i++) {
+        matrixModule.sendMessage(array.next().value, "**Discord Connection ***reconnecting***...**", false);
+    }
+});
+
 discordClient.on("message", message => {
     if(message.author.username === config.discord.username) return;
     if((message.content == null || message.content == "") && message.attachments.size == 0) return;
@@ -282,6 +298,32 @@ discordClient.on("guildMemberRemove", (member) => {
 
     for(let i = 0; i < allRooms.length; i++) {
         intent.leave(allRooms[i]);
+    }
+});
+
+discordClient.on("guildBanAdd", (guild, user) => {
+    if(!guildMappings.has(guild.id)) return;
+
+    let userId = "@discord_"+user.username+":"+config.matrix.domain;
+
+    let array = guildMappings.get(guild.id);
+    for(let i = 0; i < array.length; i++) {
+        let room = discordMappings.get(array[i]);
+        bridge.getIntent().kick(room, userId).then(() => {
+            bridge.getIntent().ban(room, userId, "Banned on discord");
+        });
+    }
+});
+
+discordClient.on("guildBanRemove", (guild, user) => {
+    if(!guildMappings.has(guild.id)) return;
+
+    let userId = "@discord_"+user.username+":"+config.matrix.domain;
+
+    let array = guildMappings.get(guild.id);
+    for(let i = 0; i < array.length; i++) {
+        let room = discordMappings.get(array[i]);
+        bridge.getIntent().unban(room, userId);
     }
 });
 
