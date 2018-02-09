@@ -39,8 +39,6 @@ function doBridgeAccount(config, mappings, typingStartCb, typingStopCb) {
             // Add 2000 to adjust for latency
             //if(event.getTs()+1000 < currentTime) return;
 
-            console.log("membership event");
-
             switch(event.getContent().membership) {
                 case "invite":
                     if(mappings.has(member.roomId)) {

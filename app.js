@@ -123,7 +123,6 @@ discordClient.on("ready", () => {
                     matrixPresence = "unavailable";
                     break;
             }
-            console.log("set " + member.user.username + " to " + matrixPresence);
             memberIntent.getClient().setPresence(matrixPresence);
 
             if(!config.initalSyncAvatars) continue;
@@ -209,15 +208,11 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
     // Get the list of all matrix rooms this person is in
     let allRooms = [];
     let channels = guildMappings.get(oldMember.guild.id);
-    console.log(channels);
     for(let i = 0; i < channels.length; i++) {
         if(newMember.permissionsIn(channels[i]).has(Discord.Permissions.FLAGS.VIEW_CHANNEL)) {
-            console.log(discordMappings.get(channels[i]));
             allRooms.push(discordMappings.get(channels[i]));
         }
     }
-
-    console.log(allRooms);
 
     if(oldMember.presence.status !== newMember.presence.status) {
         if(newMember.presence.status == "dnd" || newMember.presence.status == "idle") {
@@ -380,8 +375,6 @@ matrixModule.doBridgeAccount(config, matrixMappings, (room) => {
 }, (room) => {
     // Check if we are bridging that room
     if(!matrixMappings.has(room)) return;
-
-    console.log("Typing stop detected");
 
     let channel = discordClient.guilds.get(matrixMappings.get(room).guild).channels.get(matrixMappings.get(room).channel);
 

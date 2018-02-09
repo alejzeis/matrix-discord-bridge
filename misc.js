@@ -93,10 +93,8 @@ function getMatrixRoomsForMember(Discord, member, discordMappings, guildMappings
     // Get the list of all matrix rooms this person is in
     let allRooms = [];
     let channels = guildMappings.get(member.guild.id);
-    console.log(channels);
     for(let i = 0; i < channels.length; i++) {
         if(member.permissionsIn(channels[i]).has(Discord.Permissions.FLAGS.VIEW_CHANNEL)) {
-            console.log(discordMappings.get(channels[i]));
             allRooms.push(discordMappings.get(channels[i]));
         }
     }
