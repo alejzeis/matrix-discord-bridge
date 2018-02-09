@@ -185,7 +185,7 @@ discordClient.on("typingStop", (channel, user) => {
 });
 
 discordClient.on("presenceUpdate", (oldMember, newMember) => {
-    if(!guildMappings.has(oldMember.guild.id)) return;
+    if(!guildMappings.has(newMember.guild.id)) return;
 
     let author = oldMember.nickname == null ? oldMember.user.username : oldMember.nickname;
     let intent = bridge.getIntent("@discord_"+oldMember.user.username+":"+config.matrix.domain);
@@ -282,6 +282,35 @@ discordClient.on("guildMemberRemove", (member) => {
 
     for(let i = 0; i < allRooms.length; i++) {
         intent.leave(allRooms[i]);
+    }
+});
+
+discordClient.on("guildMemberUpdate", (oldMember, newMember) => {
+    if(!guildMappings.has(newMember.guild.id)) return;
+
+    let intent = bridge.getIntent("@discord_"+oldMember.user.username+":"+config.matrix.domain);
+
+    // Get the list of all matrix rooms this person is in
+    //let allRooms = misc.getMatrixRoomsForMember(Discord, newMember, discordMappings, guildMappings);
+
+    if(oldMember.nickname !== newMember.nickname) {
+        intent.setDisplayName(newMember.nickname);
+    }
+});
+
+discordClient.on("userUpdate", (oldUser, newUser) => {
+    if(oldUser.avatar !== newUser.avatar) {
+        let url = newUser.avatarURL;
+        let intent = bridge.getIntent("@discord_"+oldUser.username+":"+config.matrix.domain);
+        if(url != null && url != "") {
+            let filename = uuidv1() + ".png";
+            misc.download(url, filename, (mimetype, downloadedLocation) => {
+                matrixModule.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype, bridge.getIntent().getClient()).then((url) => {
+                    fs.unlinkSync(downloadedLocation);
+                    intent.setAvatarUrl(url);
+                });
+            });
+        }
     }
 });
 
