@@ -13,6 +13,7 @@ const matrixModule = require("./matrix");
 const defaultConfig = {
     initalSyncAvatars: true,
     discord: {
+        username: "",
         token: "",
     },
     matrix: {
@@ -383,7 +384,7 @@ matrixModule.doBridgeAccount(config, matrixMappings, (room) => {
         prev = prev - 1;
         if(prev <= 0) {
             prev = 0;
-            channel.stopTyping();
+            channel.stopTyping(true);
         }
 
         typingMappings.set(room, prev);
@@ -436,7 +437,7 @@ new Cli({
                                     } else {
                                         // We dont want echo from appservice users being banned
                                         if(event.state_key.startsWith("@discord_")) return;
-                                        
+
                                         channel.send("***" + event.state_key + "*** **invited to room by** ***" + event.sender + "***");
                                     }
                                     break;
