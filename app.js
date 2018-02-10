@@ -82,6 +82,44 @@ var botId;
 
 let typingMappings = new Map();
 
+function setUserPresences() {
+    let iterator = matrixMappings.keys();
+    let users = [];
+    // Loop through each matrix room and get discord infromation
+    for(let i = 0; i < matrixMappings.size; i++) {
+        let room = iterator.next().value;
+
+        let channel = discordClient.guilds.get(matrixMappings.get(room).guild).channels.get(matrixMappings.get(room).channel);
+        let iteratorMembers = channel.members.keys();
+        // Loop through every member in the channel and make sure they're joined to the matrix room, and their presence and profile pictures are set
+        for(let i2 = 0; i2 < channel.members.size; i2++) {
+            let member = channel.members.get(iteratorMembers.next().value);
+            let memberIntent = bridge.getIntent("@discord_"+member.user.username+":"+config.matrix.domain);
+
+            if(users.includes(member.user.username)) {
+                continue;
+            } else users.push(member.user.username);
+
+            // Check and set presence
+            let matrixPresence;
+            switch(member.presence.status) {
+                case "online":
+                    matrixPresence = "online";
+                    break;
+                case "offline":
+                    matrixPresence = "offline";
+                    break;
+                case "idle":
+                case "dnd":
+                default:
+                    matrixPresence = "unavailable";
+                    break;
+            }
+            memberIntent.getClient().setPresence(matrixPresence);
+        }
+    }
+}
+
 discordClient.on("ready", () => {
     let iterator = matrixMappings.keys();
     let users = [];
@@ -141,6 +179,9 @@ discordClient.on("ready", () => {
             }
         }
     }
+
+    // Set user presences every 30 seconds
+    setInterval(setUserPresences, 30000);
 });
 
 discordClient.on("guildUnavailable", (guild) => {
@@ -222,7 +263,7 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
     if(oldMember.presence.status !== newMember.presence.status) {
         if(newMember.presence.status == "dnd" || newMember.presence.status == "idle") {
             misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Is now **" + (newMember.presence.status == "dnd" ? "on Do Not Disturb" : newMember.presence.status) + "**"));
-            intent.getClient().setPresence("offline");
+            intent.getClient().setPresence("unavailable");
         } else {
             intent.getClient().setPresence(newMember.presence.status == "online" ? "online" : "offline");
         }
