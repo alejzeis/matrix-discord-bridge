@@ -101,21 +101,20 @@ function setUserPresences() {
             } else users.push(member.user.username);
 
             // Check and set presence
-            let matrixPresence;
             switch(member.presence.status) {
                 case "online":
-                    matrixPresence = "online";
-                    break;
                 case "offline":
-                    matrixPresence = "offline";
+                    memberIntent.getClient().setPresence(member.presence.status);
                     break;
                 case "idle":
                 case "dnd":
                 default:
-                    matrixPresence = "unavailable";
+                    memberIntent.getClient().setPresence({
+                        presence: "unavailable",
+                        status_msg: (member.presence.status == "dnd" ? "Do not Disturb" : "Idle")
+                    });
                     break;
             }
-            memberIntent.getClient().setPresence(matrixPresence);
         }
     }
 }
@@ -148,21 +147,20 @@ discordClient.on("ready", () => {
             } else users.push(member.user.username);
 
             // Check and set presence
-            let matrixPresence;
             switch(member.presence.status) {
                 case "online":
-                    matrixPresence = "online";
-                    break;
                 case "offline":
-                    matrixPresence = "offline";
+                    memberIntent.getClient().setPresence(member.presence.status);
                     break;
                 case "idle":
                 case "dnd":
                 default:
-                    matrixPresence = "unavailable";
+                    memberIntent.getClient().setPresence({
+                        presence: "unavailable",
+                        status_msg: (member.presence.status == "dnd" ? "Do not Disturb" : "Idle")
+                    });
                     break;
             }
-            memberIntent.getClient().setPresence(matrixPresence);
 
             if(!config.initalSyncAvatars) continue;
 
@@ -263,7 +261,10 @@ discordClient.on("presenceUpdate", (oldMember, newMember) => {
     if(oldMember.presence.status !== newMember.presence.status) {
         if(newMember.presence.status == "dnd" || newMember.presence.status == "idle") {
             misc.intentSendMessageToRooms(intent, allRooms, misc.getNoticeFormatted("Is now **" + (newMember.presence.status == "dnd" ? "on Do Not Disturb" : newMember.presence.status) + "**"));
-            intent.getClient().setPresence("unavailable");
+            intent.getClient().setPresence({
+                presence: "unavailable",
+                status_msg: (newMember.presence.status == "dnd" ? "Do not Disturb" : "Idle")
+            });
         } else {
             intent.getClient().setPresence(newMember.presence.status == "online" ? "online" : "offline");
         }
