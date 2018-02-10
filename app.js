@@ -179,6 +179,10 @@ discordClient.on("message", message => {
                 bridge.getIntent().sendMessage(room, misc.getTextMessageFormatted("BOT ERROR: failed to send message"));
             });
         });
+    } else if(message.embeds != null && message.embeds.length > 0) {
+        //console.log("There are " + message.embeds.length);
+        //console.log(message.embeds[0].type);
+        // TODO
     } else {
         intent.setDisplayName(author).then(() => {
             intent.sendMessage(room, misc.getTextMessageFormatted(message.cleanContent));
@@ -481,12 +485,39 @@ new Cli({
                                         channel.send("**" + event.sender + "**: ***Sent " + (isFile ? "a file" : "an image") + ":*** " + config.matrix.serverURL + "/_matrix/media/v1/download/" + event.content.url.replace("mxc://", ""));
                                     } else {
                                         misc.downloadFromMatrix(config, event.content.url.replace("mxc://", ""), event.content.body, (mimeType, downloadedLocation) => {
-                                            channel.send("**" + event.sender + "**: ***Sent " + (isFile ? "a file" : "an image") + ":*** " + event.content.body + "*", new Discord.Attachment(downloadedLocation, event.content.body))
+                                            channel.send("**" + event.sender + "**: ***Sent " + (isFile ? "a file" : "an image") + ":*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
                                                 .then(() => fs.unlinkSync(downloadedLocation));
                                                 // Delete the image we downloaded after we uploaded it
                                         });
                                     }
                                     break;
+                                case "m.video":
+                                    // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
+                                    if(event.content.info.size >= (1024*1024*8)) {
+                                        // File is too big, send link then
+                                        channel.send("**" + event.sender + "**: ***Sent a video:*** " + config.matrix.serverURL + "/_matrix/media/v1/download/" + event.content.url.replace("mxc://", ""));
+                                    } else {
+                                        misc.downloadFromMatrix(config, event.content.url.replace("mxc://", ""), event.content.body, (mimeType, downloadedLocation) => {
+                                            channel.send("**" + event.sender + "**: ***Sent a video:*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
+                                                .then(() => fs.unlinkSync(downloadedLocation));
+                                                // Delete the video we downloaded after we uploaded it
+                                        });
+                                    }
+                                    break;
+                                case "m.audio":
+                                    // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
+                                    if(event.content.info.size >= (1024*1024*8)) {
+                                        // File is too big, send link then
+                                        channel.send("**" + event.sender + "**: ***Sent an audio file:*** " + config.matrix.serverURL + "/_matrix/media/v1/download/" + event.content.url.replace("mxc://", ""));
+                                    } else {
+                                        misc.downloadFromMatrix(config, event.content.url.replace("mxc://", ""), event.content.body, (mimeType, downloadedLocation) => {
+                                            channel.send("**" + event.sender + "**: ***Sent an audio file:*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
+                                                .then(() => fs.unlinkSync(downloadedLocation));
+                                                // Delete the video we downloaded after we uploaded it
+                                        });
+                                    }
+                                    break;
+
                             }
                             break;
                     }
@@ -498,4 +529,6 @@ new Cli({
     }
 }).run();
 
-discordClient.login(config.discord.token);
+setTimeout(() => {
+    discordClient.login(config.discord.token);
+}, 500);
