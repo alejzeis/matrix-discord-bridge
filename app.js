@@ -374,9 +374,6 @@ discordClient.on("guildMemberUpdate", (oldMember, newMember) => {
 
     let intent = bridge.getIntent("@discord_"+oldMember.user.username+":"+config.matrix.domain);
 
-    // Get the list of all matrix rooms this person is in
-    //let allRooms = misc.getMatrixRoomsForMember(Discord, newMember, discordMappings, guildMappings);
-
     if(oldMember.nickname !== newMember.nickname) {
         intent.setDisplayName(newMember.nickname);
     }
@@ -499,8 +496,6 @@ new Cli({
                                     channel.send("***" + event.state_key + "*** **left the room**");
                                     break;
                                 case "ban":
-                                    // We dont want echo from appservice users being banned
-                                    if(event.state_key.startsWith("@discord_")) return;
 
                                     channel.send("***" + event.state_key + "*** **banned from room by** ***" + event.sender + "***");
                                     break;
@@ -555,7 +550,7 @@ new Cli({
                                         misc.downloadFromMatrix(config, event.content.url.replace("mxc://", ""), event.content.body, (mimeType, downloadedLocation) => {
                                             channel.send("**" + event.sender + "**: ***Sent an audio file:*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
                                                 .then(() => fs.unlinkSync(downloadedLocation));
-                                                // Delete the video we downloaded after we uploaded it
+                                                // Delete the audio file we downloaded after we uploaded it
                                         });
                                     }
                                     break;
@@ -573,4 +568,4 @@ new Cli({
 
 setTimeout(() => {
     discordClient.login(config.discord.token);
-}, 500);
+}, 1000);
