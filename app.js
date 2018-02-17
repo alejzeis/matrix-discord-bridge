@@ -211,7 +211,7 @@ discordClient.on("message", message => {
         let attachment = message.attachments.values().next().value;
         misc.download(attachment.url, attachment.filename, (mimetype, downloadedLocation) => {
             matrixModule.uploadContent(fs.createReadStream(downloadedLocation), attachment.filename, mimetype, bridge.getIntent().getClient()).then((url) => {
-                intent.sendMessage(room, misc.getFileOrImageUploadContent(attachment, url, mimetype)).done(() => fs.unlinkSync(downloadedLocation));
+                intent.sendMessage(room, misc.getMediaUploadContent(attachment, url, mimetype)).done(() => fs.unlinkSync(downloadedLocation));
             }).catch((err) => {
                 console.error("Failed to upload content!");
                 console.error(err);
@@ -496,7 +496,6 @@ new Cli({
                                     channel.send("***" + event.state_key + "*** **left the room**");
                                     break;
                                 case "ban":
-
                                     channel.send("***" + event.state_key + "*** **banned from room by** ***" + event.sender + "***");
                                     break;
                             }

@@ -44,7 +44,40 @@ function isFileImage(filename) {
     }
 }
 
-function getFileOrImageUploadContent(attachment, url, mimetype) {
+function isFileVideo(filename) {
+    let ext = path.extname(filename).toLowerCase();
+    switch(ext) {
+        case ".mpg":
+        case ".mp2":
+        case ".mp4":
+        case ".mpeg":
+        case ".mpv":
+        case ".mov":
+        case ".wmv":
+            return true;
+        default:
+            return false;
+    }
+}
+
+function isFileAudio(filename) {
+    let ext = path.extname(filename).toLowerCase();
+    switch(ext) {
+        case ".mp3":
+        case ".mpa":
+        case ".aac":
+        case ".ogg":
+        case ".opus":
+        case ".flac":
+        case ".wav":
+        case ".wma":
+            return true;
+        default:
+            return false;
+    }
+}
+
+function getMediaUploadContent(attachment, url, mimetype) {
     let content = {
         msgtype: "m.file",
         body: attachment.filename,
@@ -60,6 +93,11 @@ function getFileOrImageUploadContent(attachment, url, mimetype) {
         content.msgtype = "m.image";
         content.info.w = attachment.width;
         content.info.h = attachment.height;
+    } else if(isFileAudio(attachment.filename)) {
+        content.msgtype = "m.audio";
+        // TODO: duration
+    } else if(isFileVideo(attachment.filename)) {
+        content.msgtype = "m.video";
     }
 
     return content;
@@ -104,7 +142,7 @@ function getMatrixRoomsForMember(Discord, member, discordMappings, guildMappings
 module.exports.download = download;
 module.exports.downloadFromMatrix = downloadFromMatrix;
 module.exports.isFileImage = isFileImage;
-module.exports.getFileOrImageUploadContent = getFileOrImageUploadContent;
+module.exports.getMediaUploadContent = getMediaUploadContent;
 module.exports.getTextMessageFormatted = getTextMessageFormatted;
 module.exports.getNoticeFormatted = getNoticeFormatted;
 module.exports.intentSendMessageToRooms = intentSendMessageToRooms;
