@@ -42,3 +42,6 @@ bridgeConfiguration.yml
 discord-bridge-registration.yml
 
 *.db
+
+# Output Javascript
+js/
