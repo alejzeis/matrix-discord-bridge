@@ -6,7 +6,7 @@ import { join } from "path";
 
 const appserviceUserPart = "appservice-discord";
 
-var self;
+var self: MatrixAppservice;
 
 export class MatrixAppservice {
     private bridge: DiscordMatrixBridge;
@@ -49,6 +49,7 @@ export class MatrixAppservice {
             controller: {
                 onUserQuery: self.onUserQuery,
                 onAliasQuery: self.onAliasQuery,
+                onAliasQueried: self.onAliasQueried,
                 onEvent: self.onEvent
             }
         });
@@ -61,8 +62,47 @@ export class MatrixAppservice {
         this.cli.run();
     }
 
-    private onUserQuery(queriedUser): object {
+    public getIntentForUser(user: string) {
+        return this.matrixBridge.getIntent("@!discord_" + user + ":" + this.bridge.config.matrix.domain);
+    }
+
+    public uploadContent(readStream, filename: string, mimetype: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            self.matrixBridge.getIntent().getClient().uploadContent({
+                stream: readStream,
+                name: filename,
+                type: mimetype,
+                onlyContentUri: true,
+                rawResponse: false
+            }).then((url) => {
+                resolve(JSON.parse(url).content_uri);
+            }).catch((err) => {
+                reject(err);
+            });
+        })
+    }
+
+    private onUserQuery(matrixUser): object {
         return {};
+    }
+
+    private onAliasQueried(alias, roomId) {
+        let discordRoom = alias.split(":")[0].split("_")[1].replace("#!", "").replace("#", "");
+        console.log("Alias queried " + alias + ", discord room: " + discordRoom);
+
+        let intent = self.matrixBridge.getIntent();
+        let roomStore = self.matrixBridge.getRoomStore();
+
+        return new Promise((resolve, reject) => {
+            roomStore.getEntriesByRemoteId(discordRoom).then((values) => {
+                let entry = values[0];
+                entry.id = discordRoom;
+
+                roomStore.upsertEntry(entry).then(() => {
+                    self.bridge.discordBot.setupNewProvisionedRoom(discordRoom);
+                });
+            });
+        });
     }
 
     private onAliasQuery(alias, aliasLocalpart): Promise<object> {
@@ -84,15 +124,17 @@ export class MatrixAppservice {
 
                 console.log(value);
 
-                resolve({
-                    creationOpts: {
-                        room_alias_name: aliasLocalpart,
-                        name: "#" + value.data.name + " (" + value.data.guild + ") [Discord]",
-                        topic: value.data.topic,
-                        visibility: value.data.visibility,
-                        preset: value.data.matrixPreset
-                    },
-                    remote: value
+                roomStore.removeEntriesByRemoteRoomId(discordRoom).then(() => {
+                    resolve({
+                        creationOpts: {
+                            room_alias_name: aliasLocalpart,
+                            name: "#" + value.data.name + " (" + value.data.guild + ") [Discord]",
+                            topic: value.data.topic == null ? "Bridged Discord Room" : value.data.topic,
+                            visibility: value.data.visibility,
+                            preset: value.data.matrixPreset
+                        },
+                        remote: value.remote
+                    });
                 });
             });
         });
