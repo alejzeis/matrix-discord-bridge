@@ -4,7 +4,7 @@ import { DiscordMatrixBridge } from "./main";
 
 import { join } from "path";
 
-const appserviceUserPart = "appservice-discord";
+export const appserviceUserPart = "appservice-discord";
 
 var self: MatrixAppservice;
 
