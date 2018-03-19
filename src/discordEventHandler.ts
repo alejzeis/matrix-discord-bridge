@@ -3,6 +3,7 @@ import * as Discord from "discord.js";
 import * as matrix from "./matrix";
 
 import { DiscordBot } from "./discord";
+import { RemoteUser } from "matrix-appservice-bridge";
 
 export class DiscordEventHandler {
     private discordBot: DiscordBot;
@@ -33,7 +34,32 @@ export class DiscordEventHandler {
             let id = channel.name + ";" + roomNumber;
 
             let roomStore = this.discordBot.getBridge().matrixAppservice.matrixBridge.getRoomStore();
+            let userStore = this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore();
             let intent = this.discordBot.getBridge().matrixAppservice.matrixBridge.getIntent();
+
+            // Update the user store and remove each user from the channel
+            channel.members.forEach((member) => {
+                userStore.getRemoteUser(member.user.id).then((user) => {
+                    if(user != null) {
+                        let newUser = new RemoteUser(member.user.id);
+
+                        // Remove that channel from the rooms array
+                        let index = user.data.rooms.indexOf(channel.id);
+                        if(index > -1)
+                            user.data.rooms.splice(index, 1);
+
+                        newUser.set("avatar", user.data.avatar);
+                        newUser.set("rooms", user.data.rooms);
+                        newUser.set("name", user.data.name);
+
+                        userStore.delete({id: member.user.id }).then(() => {
+                            userStore.setRemoteUser(newUser);
+                        });
+                    }
+                });
+            });
+
+            // Kick all the members in the room and then finally leave 
             roomStore.getEntryById(id).then((entry) => {
                 if(entry != null) {
                     console.log("Found entry for " + id);

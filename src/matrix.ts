@@ -1,6 +1,7 @@
 import { Cli, Bridge, AppServiceRegistration } from "matrix-appservice-bridge";
 
 import { DiscordMatrixBridge } from "./main";
+import { MatrixEventHandler } from "./matrixEventHandler";
 
 import { join } from "path";
 
@@ -13,12 +14,15 @@ export class MatrixAppservice {
     private cli: Cli;
     private _matrixBridge: Bridge;
 
+    private eventHandler: MatrixEventHandler;
+
     private registrationLocation: string;
 
     get matrixBridge(): Bridge { return this._matrixBridge; }
 
     constructor(bridge: DiscordMatrixBridge) {
         this.bridge = bridge;
+        this.eventHandler = new MatrixEventHandler(this);
 
         this.registrationLocation = join(this.bridge.configurationDir, "appservice-registration.yml");
 
@@ -50,7 +54,7 @@ export class MatrixAppservice {
                 onUserQuery: self.onUserQuery,
                 onAliasQuery: self.onAliasQuery,
                 onAliasQueried: self.onAliasQueried,
-                onEvent: self.onEvent
+                onEvent: self.onEvent.bind(self)
             }
         });
 
@@ -148,6 +152,8 @@ export class MatrixAppservice {
             case "m.room.member":
                 if(event.age >= 5000) return;
                 if(event.sender == self.bridge.config.matrix.bridgeAccount.userId) return;
+
+                this.eventHandler.onRoomMemberEvent(request, context);
         }
     }
 }

@@ -89,6 +89,9 @@ export class DiscordBot {
                 }
             });
         });
+
+        self.setPresences.bind(self)();
+        setInterval(self.setPresences.bind(self), 30000);
     }
 
     public tryInsertNewRemoteRoom(self: DiscordBot, roomNumber, guild: Discord.Guild, channel: Discord.TextChannel, canInvite: boolean, canAccess: boolean): Promise<any> {
@@ -236,5 +239,35 @@ export class DiscordBot {
         }).catch((err) => {
             console.error(err);
         });
+    }
+
+    private setPresences() {
+        let roomStore = self.bridge.matrixAppservice.matrixBridge.getRoomStore();
+
+        roomStore.getEntriesByRemoteRoomData({
+            type: "discord-text"
+        }).then((entries) => {
+            entries.forEach((entry) => {
+                if(entry.matrix != null) {
+                    let guildId = entry.remote.get("guild");
+
+                    this.client.guilds.get(guildId).members.forEach((member) => {
+                        switch(member.presence.status) {
+                            case "online":
+                            case "offline":
+                                this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence(member.presence.status);
+                                break;
+                            case "dnd":
+                            case "idle":
+                                this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence({
+                                    presence: "unavailable",
+                                    status_msg: (member.presence.status == "dnd" ? "Do not Disturb" : "Idle")
+                                });
+                                break;
+                        }
+                    });
+                }
+            })
+        })
     }
 }
