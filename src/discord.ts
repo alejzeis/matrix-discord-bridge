@@ -28,12 +28,17 @@ export class DiscordBot {
 
         this.client.on("channelCreate", this.eventHandler.onChannelCreate.bind(this.eventHandler));
         this.client.on("channelDelete", this.eventHandler.onChannelDelete.bind(this.eventHandler));
+        this.client.on("channelUpdate", this.eventHandler.onChannelUpdate.bind(this.eventHandler));
 
         self = this;
     }
 
     public run() {
         this.client.login(this.bridge.config.discord.token);
+    }
+
+    public getChannel(guild, channel): Discord.GuildChannel {
+        return this.client.guilds.get(guild).channels.get(channel);
     }
 
     public setupNewProvisionedRoom(room: string) {

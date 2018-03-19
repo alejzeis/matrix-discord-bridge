@@ -59,7 +59,7 @@ export class DiscordEventHandler {
                 });
             });
 
-            // Kick all the members in the room and then finally leave 
+            // Kick all the members in the room and then finally leave
             roomStore.getEntryById(id).then((entry) => {
                 if(entry != null) {
                     console.log("Found entry for " + id);
@@ -85,5 +85,9 @@ export class DiscordEventHandler {
                 }
             });
         }
+    }
+
+    public onChannelUpdate(oldChannel: Discord.Channel, newChannel: Discord.Channel) {
+        // TODO
     }
 }

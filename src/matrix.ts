@@ -19,6 +19,7 @@ export class MatrixAppservice {
     private registrationLocation: string;
 
     get matrixBridge(): Bridge { return this._matrixBridge; }
+    getBridge(): DiscordMatrixBridge { return this.bridge; }
 
     constructor(bridge: DiscordMatrixBridge) {
         this.bridge = bridge;
@@ -100,11 +101,14 @@ export class MatrixAppservice {
         return new Promise((resolve, reject) => {
             roomStore.getEntriesByRemoteId(discordRoom).then((values) => {
                 let entry = values[0];
-                entry.id = discordRoom;
 
-                roomStore.upsertEntry(entry).then(() => {
-                    self.bridge.discordBot.setupNewProvisionedRoom(discordRoom);
-                });
+                roomStore.delete({ id: entry.id }).then(() => {
+                    entry.id = discordRoom;
+
+                    roomStore.upsertEntry(entry).then(() => {
+                        self.bridge.discordBot.setupNewProvisionedRoom(discordRoom);
+                    });
+                })
             });
         });
     }
@@ -151,9 +155,16 @@ export class MatrixAppservice {
         switch(event.type) {
             case "m.room.member":
                 if(event.age >= 5000) return;
-                if(event.sender == self.bridge.config.matrix.bridgeAccount.userId) return;
+                if(event.sender == this.bridge.config.matrix.bridgeAccount.userId) return;
 
                 this.eventHandler.onRoomMemberEvent(request, context);
+                break;
+            case "m.room.message":
+                if(event.age >= 5000) return;
+                if(event.sender == this.bridge.config.matrix.bridgeAccount.userId) return;
+
+                this.eventHandler.onRoomMessageEvent(request, context);
+                break;
         }
     }
 }
