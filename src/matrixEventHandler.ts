@@ -34,6 +34,11 @@ export class MatrixEventHandler {
                         let channelId = entry.remote.get("channel");
 
                         let channel = this.matrix.getBridge().discordBot.getChannel(guildId, channelId) as TextChannel;
+                        if(channel == null) {
+                            this.handleMissingChannelMapping(entry, channelId, entry.remote.get("name"));
+                            return;
+                        }
+
                         switch(event.content.membership) {
                             case "join":
                                 channel.send("***" + event.state_key + "*** **joined the room**");
@@ -69,6 +74,11 @@ export class MatrixEventHandler {
                 let channelId = entry.remote.get("channel");
 
                 let channel = this.matrix.getBridge().discordBot.getChannel(guildId, channelId) as TextChannel;
+                if(channel == null) {
+                    this.handleMissingChannelMapping(entry, channelId, entry.remote.get("name"));
+                    return;
+                }
+
                 switch(event.content.msgtype) {
                     case "m.text":
                         channel.send("**" + event.sender + "**: " + event.content.body);
@@ -76,5 +86,9 @@ export class MatrixEventHandler {
                 }
             }
         });
+    }
+
+    private handleMissingChannelMapping(entry, channelId, channelName) {
+        this.matrix.getBridge().discordBot.handleChannelDelete(channelId.substr(channelId.length - 4), channelName, channelId);
     }
 }

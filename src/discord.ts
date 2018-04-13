@@ -2,6 +2,7 @@ import * as Discord from "discord.js";
 import { RemoteRoom, RemoteUser } from "matrix-appservice-bridge";
 import * as uuidv4 from "uuid/v4";
 
+import * as matrix from "./matrix";
 import { DiscordMatrixBridge } from "./main";
 import { DiscordEventHandler } from "./discordEventHandler";
 import * as util from "./util";
@@ -113,6 +114,7 @@ export class DiscordBot {
                     room.set("type", "discord-text");
                     room.set("guild", guild.id);
                     room.set("channel", channel.id);
+                    room.set("name", channel.name);
                     roomStore.upsertEntry({
                         id: roomId,
                         matrix: null,
@@ -243,6 +245,67 @@ export class DiscordBot {
             }
         }).catch((err) => {
             console.error(err);
+        });
+    }
+
+    public handleChannelDelete(roomNumber, channelName: string, channelId, kickMessage: string = "The Discord channel this room was bridged to was deleted.") {
+        let id = channelName + ";" + roomNumber;
+
+        let roomStore = this.getBridge().matrixAppservice.matrixBridge.getRoomStore();
+        let userStore = this.getBridge().matrixAppservice.matrixBridge.getUserStore();
+        let intent = this.getBridge().matrixAppservice.matrixBridge.getIntent();
+
+        // Kick all the members in the room and then finally leave
+        roomStore.getEntryById(id).then((entry) => {
+            if(entry != null) {
+                if(entry.matrix != null) {
+                    this.getBridge().matrixAppservice.matrixBridge.getBot().getJoinedMembers(entry.matrix.roomId).then((members) => {
+                        for(var member in members) {
+                            if(!member.startsWith("@" + matrix.appserviceUserPart)) {
+                                // Update the user store and remove the user from the channel
+                                if(member.startsWith("@!discord_")) {
+                                    let id = member.split(":")[0].split("_")[1];
+
+                                    userStore.getRemoteUser(id).then((user) => {
+                                        if(user != null) {
+                                            let newUser = new RemoteUser(id);
+
+                                            // Remove that channel from the rooms array
+                                            let index = user.data.rooms.indexOf(channelId);
+                                            if(index > -1)
+                                                user.data.rooms.splice(index, 1);
+
+                                            newUser.set("avatar", user.data.avatar);
+                                            newUser.set("rooms", user.data.rooms);
+                                            newUser.set("name", user.data.name);
+
+                                            userStore.delete({id: id }).then(() => {
+                                                userStore.setRemoteUser(newUser);
+                                            });
+                                        } else {
+                                            console.error("Member is null while attempting to processes room deletion, id: " + id);
+                                        }
+                                    });
+                                }
+
+                                // Kick the user
+                                intent.kick(entry.matrix.roomId, member, kickMessage);
+                            }
+                        }
+
+                        // Leave the room after 25 seconds to allow processing of kicking
+                        setTimeout(function() {
+                            intent.leave(entry.matrix.roomId).then(() => {
+                                console.log("Finally left room: " + id);
+                            });
+                        }, 25000);
+                    }).catch((err) => console.error(err));
+                }
+
+                roomStore.removeEntriesByRemoteRoomId(id).then(() => {
+                    console.log("Successfully removed room by id");
+                }).catch((err) => console.error(err));
+            }
         });
     }
 
