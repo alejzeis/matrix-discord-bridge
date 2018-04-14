@@ -45,11 +45,31 @@ export class DiscordEventHandler {
         if(message.author.username == this.discordBot.getBridge().config.discord.username) return;
 
         let discordBot = this.discordBot;
+        let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(message.author.id);
 
         // Retrieve the bridged matrix room ID that belongs to the channel
         this.discordBot.getBridge().matrixAppservice.getMatrixRoomIdFromDiscordInfo(message.guild.id, message.channel.id).then((roomId) => {
-            if(roomId != null && roomId != "")
-                processDiscordToMatrixMessage(message, discordBot, roomId);
+            if(roomId != null && roomId != "") {
+                if(message.cleanContent.startsWith("$")) {
+                    if(message.cleanContent.startsWith("$invite")) {
+                        let split = message.cleanContent.split(" ");
+
+                        if(split.length > 1) {
+                            intent.invite(roomId, split[1]).then(() => {
+                                message.reply("Invited *" + split[1] + "* to the room.");
+                            }).catch((e) => {
+                                console.error("Error while attempting to process room invite from discord to matrix.");
+                                console.error(e);
+                                message.reply("Sorry, there was an error while processing.");
+                            });
+                        } else {
+                            message.reply("Incorrect format, $invite [user address]");
+                        }
+                    }
+                } else {
+                    processDiscordToMatrixMessage(message, discordBot, roomId, intent);
+                }
+            }
         });
     }
 }

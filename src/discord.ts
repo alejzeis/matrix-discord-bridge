@@ -202,7 +202,7 @@ export class DiscordBot {
 
                 // Set our display name if it's changed
                 if(user.data.name != name) {
-                    userIntent.setDisplayName(name + " (Discord)").then(() => {
+                    userIntent.setDisplayName(name + (member.user.bot ? " [BOT]" : "") + " (Discord)").then(() => {
                         let newUser = new RemoteUser(member.user.id);
 
                         newUser.set("avatar", member.user.avatar);

@@ -17,9 +17,7 @@ function formatMatrixTextMessage(plaintext) {
     }
 }
 
-export function processDiscordToMatrixMessage(message: Discord.Message, discordBot: DiscordBot, matrixRoomId: string) {
-    let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(message.author.id);
-
+export function processDiscordToMatrixMessage(message: Discord.Message, discordBot: DiscordBot, matrixRoomId: string, intent) {
     if(message.attachments.size > 0) {
         // TODO: Process attachments
     } else if (message.embeds != null && message.embeds.length > 0) {
