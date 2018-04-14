@@ -72,4 +72,29 @@ export class DiscordEventHandler {
             }
         });
     }
+
+    public onTypingStart(channel: Discord.Channel, user: Discord.User) {
+        this._typingStartOrStop(channel, user, true);
+    }
+
+    public onTypingStop(channel: Discord.Channel, user: Discord.User) {
+        this._typingStartOrStop(channel, user, false);
+    }
+
+    private _typingStartOrStop(channel: Discord.Channel, user: Discord.User, typing: boolean) {
+        // We don't want echo from our bot (eg. typing to matrix that are from our own bot on discord)
+        if(user.username == this.discordBot.getBridge().config.discord.username) return;
+
+        let discordBot = this.discordBot;
+        let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(user.id);
+
+        if(!(channel instanceof Discord.GuildChannel)) return;
+
+        // Retrieve the bridged matrix room ID that belongs to the channel
+        this.discordBot.getBridge().matrixAppservice.getMatrixRoomIdFromDiscordInfo(channel.guild.id, channel.id).then((roomId) => {
+            if(roomId != null && roomId != "") {
+                intent.sendTyping(roomId, typing);
+            }
+        });
+    }
 }
