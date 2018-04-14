@@ -150,8 +150,6 @@ export class DiscordBot {
 
         userStore.getRemoteUser(member.user.id).then((user) => {
             if(user != null) {
-                console.log("Found user: ");
-                console.log(user);
 
                 let name = (member.nickname != null ? member.nickname : member.user.username);
 
@@ -184,9 +182,6 @@ export class DiscordBot {
                         userIntent.join(remoteRoomEntry.matrix.roomId).then(() => {
                             user.data.rooms.push(remoteRoomEntry.remote.get("channel"));
 
-                            console.log("!|!|!|! New content: ");
-                            console.log(user.data.rooms);
-
                             let newUser = new RemoteUser(member.user.id);
 
                             newUser.set("avatar", member.user.avatar);
@@ -198,8 +193,6 @@ export class DiscordBot {
                             });
                         });
                     });
-                } else {
-                    console.log("!|!|! Included!");
                 }
 
                 // Set our display name if it's changed
@@ -228,7 +221,6 @@ export class DiscordBot {
                 user.set("name", displayName);
 
                 userStore.setRemoteUser(user).then(() => {
-                    console.log("!|!| Set first new remote user")
                     userIntent.setDisplayName(displayName + isBot + " (Discord)").then(() => {
                         if(member.user.avatarURL != null && member.user.avatarURL != "") {
                             let filename = uuidv4() + ".png";

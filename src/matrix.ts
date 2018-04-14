@@ -148,8 +148,6 @@ export class MatrixAppservice {
 
                 let value = values[0];
 
-                console.log(value);
-
                 roomStore.removeEntriesByRemoteRoomId(discordRoom).then(() => {
                     resolve({
                         creationOpts: {
