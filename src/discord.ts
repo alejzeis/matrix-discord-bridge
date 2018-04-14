@@ -314,6 +314,8 @@ export class DiscordBot {
     private setPresences() {
         let roomStore = self.bridge.matrixAppservice.matrixBridge.getRoomStore();
 
+        let users = new Array();
+
         roomStore.getEntriesByRemoteRoomData({
             type: "discord-text"
         }).then((entries) => {
@@ -322,18 +324,23 @@ export class DiscordBot {
                     let guildId = entry.remote.get("guild");
 
                     this.client.guilds.get(guildId).members.forEach((member) => {
-                        switch(member.presence.status) {
-                            case "online":
-                            case "offline":
-                                this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence(member.presence.status);
-                                break;
-                            case "dnd":
-                            case "idle":
-                                this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence({
-                                    presence: "unavailable",
-                                    status_msg: (member.presence.status == "dnd" ? "Do not Disturb" : "Idle")
-                                });
-                                break;
+                        // Check if we've already updated the presence for this user
+                        if(!users.includes(member.user.id)) {
+                            switch(member.presence.status) {
+                                case "online":
+                                case "offline":
+                                    this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence(member.presence.status);
+                                    break;
+                                case "dnd":
+                                case "idle":
+                                    this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence({
+                                        presence: "unavailable",
+                                        status_msg: (member.presence.status == "dnd" ? "Do not Disturb" : "Idle")
+                                    });
+                                    break;
+                            }
+
+                            users.push(member.user.id);
                         }
                     });
                 }
