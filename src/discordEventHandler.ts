@@ -37,7 +37,6 @@ export class DiscordEventHandler {
             let domain = this.discordBot.getBridge().config.matrix.domain;
 
             this.discordBot.handleChannelDelete(roomNumber, channel.name, channel.id);
-            channel.send("**This room is now** ***no longer*** **bridged to:** *#!discord_#" + channel.name + ";" + roomNumber + ":" + domain + "*");
         }
     }
 
