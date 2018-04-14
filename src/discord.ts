@@ -218,6 +218,7 @@ export class DiscordBot {
                 // Need to create and insert the user
 
                 let displayName = (member.nickname != null ? member.nickname : member.user.username);
+                let isBot = (member.user.bot ? " [BOT]" : "");
 
                 let user = new RemoteUser(member.user.id);
                 user.set("avatar", member.user.avatar);
@@ -226,7 +227,7 @@ export class DiscordBot {
 
                 userStore.setRemoteUser(user).then(() => {
                     console.log("!|!| Set first new remote user")
-                    userIntent.setDisplayName(displayName + " (Discord)").then(() => {
+                    userIntent.setDisplayName(displayName + isBot + " (Discord)").then(() => {
                         if(member.user.avatarURL != null && member.user.avatarURL != "") {
                             let filename = uuidv4() + ".png";
 
