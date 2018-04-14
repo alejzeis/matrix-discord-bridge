@@ -1,9 +1,10 @@
 import * as Discord from "discord.js";
+import { RemoteUser } from "matrix-appservice-bridge";
 
 import * as matrix from "./matrix";
 
 import { DiscordBot } from "./discord";
-import { RemoteUser } from "matrix-appservice-bridge";
+import { processDiscordToMatrixMessage } from "./messageHandling";
 
 export class DiscordEventHandler {
     private discordBot: DiscordBot;
@@ -37,5 +38,18 @@ export class DiscordEventHandler {
 
     public onChannelUpdate(oldChannel: Discord.Channel, newChannel: Discord.Channel) {
         // TODO
+    }
+
+    public onMessage(message: Discord.Message) {
+        // We don't want echo from our bot (eg. sending messages to matrix that are from our own bot on discord)
+        if(message.author.username == this.discordBot.getBridge().config.discord.username) return;
+
+        let discordBot = this.discordBot;
+
+        // Retrieve the bridged matrix room ID that belongs to the channel
+        this.discordBot.getBridge().matrixAppservice.getMatrixRoomIdFromDiscordInfo(message.guild.id, message.channel.id).then((roomId) => {
+            if(roomId != null && roomId != "")
+                processDiscordToMatrixMessage(message, discordBot, roomId);
+        });
     }
 }

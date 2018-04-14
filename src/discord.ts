@@ -30,6 +30,7 @@ export class DiscordBot {
         this.client.on("channelCreate", this.eventHandler.onChannelCreate.bind(this.eventHandler));
         this.client.on("channelDelete", this.eventHandler.onChannelDelete.bind(this.eventHandler));
         this.client.on("channelUpdate", this.eventHandler.onChannelUpdate.bind(this.eventHandler));
+        this.client.on("message", this.eventHandler.onMessage.bind(this.eventHandler));
 
         self = this;
     }

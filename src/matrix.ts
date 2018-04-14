@@ -87,6 +87,24 @@ export class MatrixAppservice {
         })
     }
 
+    public getMatrixRoomIdFromDiscordInfo(guildId, channelId): Promise<string> {
+        let roomStore = self.matrixBridge.getRoomStore();
+
+        return new Promise((resolve, reject) => {
+            roomStore.getEntriesByRemoteRoomData({
+                guild: guildId,
+                channel: channelId
+            }).then((entries) => {
+                if(entries.length < 1) {
+                    reject(new Error("Couldn't find entries for that guild ID and channel ID"));
+                    return;
+                }
+
+                resolve(entries[0].matrix.roomId);
+            }).catch((e) => reject(e));
+        });
+    }
+
     private onUserQuery(matrixUser): object {
         return {};
     }
