@@ -21,8 +21,10 @@ export class DiscordEventHandler {
 
             if(canAccess) {
                 let roomNumber = channel.id.substr(channel.id.length - 4);
+                let domain = this.discordBot.getBridge().config.matrix.domain;
 
                 this.discordBot.tryInsertNewRemoteRoom(this.discordBot, roomNumber, channel.guild, channel, canInvite, canAccess).then(() => {
+                    channel.send("**This room is now bridged to:** *#!discord_#" + channel.name + ";" + roomNumber + ":" + domain + "*");
                     console.log("Successfully added new remote room " + channel.name + ";" + roomNumber);
                 });
             }
@@ -32,7 +34,10 @@ export class DiscordEventHandler {
     public onChannelDelete(channel: Discord.Channel) {
         if(channel instanceof Discord.GuildChannel && channel instanceof Discord.TextChannel) {
             let roomNumber = channel.id.substr(channel.id.length - 4);
+            let domain = this.discordBot.getBridge().config.matrix.domain;
+
             this.discordBot.handleChannelDelete(roomNumber, channel.name, channel.id);
+            channel.send("**This room is now** ***no longer*** **bridged to:** *#!discord_#" + channel.name + ";" + roomNumber + ":" + domain + "*");
         }
     }
 
@@ -70,7 +75,7 @@ export class DiscordEventHandler {
                     processDiscordToMatrixMessage(message, discordBot, roomId, intent);
                 }
             }
-        });
+        }).catch((e) => { /* The room is probably not bridged, so ignore */ });
     }
 
     public onTypingStart(channel: Discord.Channel, user: Discord.User) {
@@ -95,6 +100,6 @@ export class DiscordEventHandler {
             if(roomId != null && roomId != "") {
                 intent.sendTyping(roomId, typing);
             }
-        });
+        }).catch((e) => { /* The room is probably not bridged, so ignore */ });
     }
 }
