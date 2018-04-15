@@ -102,3 +102,37 @@ export function processDiscordToMatrixMessage(message: Discord.Message, discordB
         intent.sendMessage(matrixRoomId, formatMatrixTextMessage(message.cleanContent));
     }
 }
+
+export function processMatrixToDiscordMessage(event, channel: Discord.TextChannel, serverURL: string) {
+    let sentMessage: string;
+
+    switch(event.content.msgtype) {
+        case "m.text":
+            channel.send("**" + event.sender + "**: " + event.content.body);
+            break;
+
+        case "m.file":
+            sentMessage = "sent a file: ";
+        case "m.image":
+            sentMessage = "sent an image: ";
+        case "m.video":
+            sentMessage = "sent a video: ";
+        case "m.audio":
+            sentMessage = "sent an audio file: ";
+
+        default:
+            let downloadURL = serverURL + "/_matrix/media/v1/download/" + event.content.url.replace("mxc://", "");
+            // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
+            if(event.content.info.size >= (1024*1024*8)) {
+                // File is too big, send link then
+                channel.send("**" + event.sender + "**: ***" + sentMessage + "*** " + downloadURL);
+            } else {
+                util.download(downloadURL, event.content.body, (contentType, downloadedLocation) => {
+                    channel.send("**" + event.sender + "**: ***" + sentMessage + "*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
+                        .then(() => unlinkSync(downloadedLocation));
+                        // Delete the image we downloaded after we uploaded it
+                });
+            }
+            break;
+    }
+}

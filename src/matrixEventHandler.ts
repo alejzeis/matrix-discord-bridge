@@ -1,6 +1,7 @@
 import { TextChannel } from "discord.js";
 import { MatrixAppservice, appserviceUserPart } from "./matrix";
 
+import { processMatrixToDiscordMessage } from "./messageHandling";
 
 export class MatrixEventHandler {
     private matrix: MatrixAppservice;
@@ -79,11 +80,7 @@ export class MatrixEventHandler {
                     return;
                 }
 
-                switch(event.content.msgtype) {
-                    case "m.text":
-                        channel.send("**" + event.sender + "**: " + event.content.body);
-                        break;
-                }
+                processMatrixToDiscordMessage(event, channel, this.matrix.getBridge().config.matrix.serverURL);
             }
         });
     }
