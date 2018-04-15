@@ -87,7 +87,7 @@ export class MatrixAppservice {
         })
     }
 
-    public getMatrixRoomIdFromDiscordInfo(guildId, channelId): Promise<string> {
+    public getMatrixRoomFromDiscordInfo(guildId, channelId): Promise<any> {
         let roomStore = self.matrixBridge.getRoomStore();
 
         return new Promise((resolve, reject) => {
@@ -100,7 +100,7 @@ export class MatrixAppservice {
                     return;
                 }
 
-                resolve(entries[0].matrix.roomId);
+                resolve(entries[0]);
             }).catch((e) => reject(e));
         });
     }

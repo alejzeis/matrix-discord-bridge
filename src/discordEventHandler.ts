@@ -1,5 +1,5 @@
 import * as Discord from "discord.js";
-import { RemoteUser } from "matrix-appservice-bridge";
+import { RemoteUser, MatrixRoom } from "matrix-appservice-bridge";
 
 import * as matrix from "./matrix";
 
@@ -50,10 +50,13 @@ export class DiscordEventHandler {
 
         let discordBot = this.discordBot;
         let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(message.author.id);
+        let bridgeStore = discordBot.getBridge().matrixAppservice.matrixBridge.getRoomStore();
 
         // Retrieve the bridged matrix room ID that belongs to the channel
-        this.discordBot.getBridge().matrixAppservice.getMatrixRoomIdFromDiscordInfo(message.guild.id, message.channel.id).then((roomId) => {
-            if(roomId != null && roomId != "") {
+        this.discordBot.getBridge().matrixAppservice.getMatrixRoomFromDiscordInfo(message.guild.id, message.channel.id).then((remoteRoom) => {
+            if(remoteRoom.matrix != null && remoteRoom.matrix.roomId != null) {
+                let roomId = remoteRoom.matrix.roomId;
+
                 if(message.cleanContent.startsWith("$")) {
                     if(message.cleanContent.startsWith("$invite")) {
                         let split = message.cleanContent.split(" ");
@@ -73,8 +76,38 @@ export class DiscordEventHandler {
                 } else {
                     processDiscordToMatrixMessage(message, discordBot, roomId, intent);
                 }
+            } else {
+                if(message.cleanContent.startsWith("$bridge")) {
+                    let split = message.cleanContent.split(" ");
+
+                    if(split.length > 1) {
+                        console.log(remoteRoom);
+
+                        let part2 = (message.channel as Discord.TextChannel).name + ";" + (message.channel.id.substr(message.channel.id.length - 4));
+
+                        console.log("New bridged room: " + split[1]);
+
+                        let matrixRoom = new MatrixRoom(split[1]);
+
+                        bridgeStore.removeEntriesByRemoteRoomId(part2).then(() => {
+                            bridgeStore.linkRooms(matrixRoom, remoteRoom.remote, remoteRoom.data, part2).then(() => {
+                                discordBot.getBridge().matrixAppservice.matrixBridge.getIntent().join(split[1]).then(() => {
+                                    // Go through each member in the channel
+                                    (message.channel as Discord.TextChannel).members.forEach((member, key, map) => {
+                                        let userIntent = discordBot.getBridge().matrixAppservice.getIntentForUser(member.user.id);
+
+                                        remoteRoom.matrix = {
+                                            roomId: split[1]
+                                        };
+                                        discordBot.setupNewUser(member, discordBot.getBridge().matrixAppservice.matrixBridge.getIntent(), userIntent, remoteRoom);
+                                    });
+                                }).catch((e) => console.error(e));
+                            }).catch((e) => console.error(e));
+                        });
+                    }
+                }
             }
-        }).catch((e) => { /* The room is probably not bridged, so ignore */ });
+        }).catch((e) => { console.error(e); });
     }
 
     public onTypingStart(channel: Discord.Channel, user: Discord.User) {
@@ -95,7 +128,8 @@ export class DiscordEventHandler {
         if(!(channel instanceof Discord.GuildChannel)) return;
 
         // Retrieve the bridged matrix room ID that belongs to the channel
-        this.discordBot.getBridge().matrixAppservice.getMatrixRoomIdFromDiscordInfo(channel.guild.id, channel.id).then((roomId) => {
+        this.discordBot.getBridge().matrixAppservice.getMatrixRoomFromDiscordInfo(channel.guild.id, channel.id).then((remoteRoom) => {
+            let roomId = remoteRoom.matrix.roomId;
             if(roomId != null && roomId != "") {
                 intent.sendTyping(roomId, typing);
             }

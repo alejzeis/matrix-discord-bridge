@@ -145,7 +145,7 @@ export class DiscordBot {
         });
     }
 
-    private setupNewUser(member: Discord.GuildMember, intent, userIntent, remoteRoomEntry) {
+    public setupNewUser(member: Discord.GuildMember, intent, userIntent, remoteRoomEntry) {
         let userStore = self.bridge.matrixAppservice.matrixBridge.getUserStore();
 
         userStore.getRemoteUser(member.user.id).then((user) => {
