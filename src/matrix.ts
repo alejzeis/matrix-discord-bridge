@@ -120,6 +120,10 @@ export class MatrixAppservice {
             roomStore.getEntriesByRemoteId(discordRoom).then((values) => {
                 let entry = values[0];
 
+                if(entry.data.customBridge) {
+                    return;
+                }
+
                 roomStore.delete({ id: entry.id }).then(() => {
                     entry.id = discordRoom;
 
@@ -147,6 +151,11 @@ export class MatrixAppservice {
                 }
 
                 let value = values[0];
+
+                if(value.data.customBridge) {
+                    reject();
+                    return;
+                }
 
                 roomStore.removeEntriesByRemoteRoomId(discordRoom).then(() => {
                     resolve({

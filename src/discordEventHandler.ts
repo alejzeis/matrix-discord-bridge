@@ -89,6 +89,8 @@ export class DiscordEventHandler {
 
                         let matrixRoom = new MatrixRoom(split[1]);
 
+                        remoteRoom.data.customBridge = true;
+
                         bridgeStore.removeEntriesByRemoteRoomId(part2).then(() => {
                             bridgeStore.linkRooms(matrixRoom, remoteRoom.remote, remoteRoom.data, part2).then(() => {
                                 discordBot.getBridge().matrixAppservice.matrixBridge.getIntent().join(split[1]).then(() => {
