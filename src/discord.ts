@@ -244,7 +244,7 @@ export class DiscordBot {
         });
     }
 
-    public handleChannelDelete(roomNumber, channelName: string, channelId, kickMessage: string = "The Discord channel this room was bridged to was deleted.") {
+    public handleChannelDelete(roomNumber, channelName: string, channelId, kickMessage: string = "The Discord channel this room was bridged to was deleted.", customBridge = false) {
         let id = channelName + ";" + roomNumber;
 
         let roomStore = this.getBridge().matrixAppservice.matrixBridge.getRoomStore();
@@ -282,25 +282,32 @@ export class DiscordBot {
                                             console.error("Member is null while attempting to processes room deletion, id: " + id);
                                         }
                                     });
-                                }
 
-                                // Kick the user
-                                intent.kick(entry.matrix.roomId, member, kickMessage);
+                                    // Kick the user
+                                    intent.kick(entry.matrix.roomId, member, kickMessage);
+                                } else if (!customBridge){ // If this isn't a custom bridge, then kick every user in the room
+                                    // Kick the user
+                                    intent.kick(entry.matrix.roomId, member, kickMessage);
+                                }
                             }
                         }
 
-                        // Leave the room after 25 seconds to allow processing of kicking
-                        setTimeout(function() {
-                            intent.leave(entry.matrix.roomId).then(() => {
-                                console.log("Finally left room: " + id);
-                            });
-                        }, 25000);
+                        if(!customBridge) { // We want to stay in the room if it's a custom bridge, the owner can remove us if they want to
+                            // Leave the room after 25 seconds to allow processing of kicking
+                            setTimeout(function() {
+                                intent.leave(entry.matrix.roomId).then(() => {
+                                    console.log("Finally left room: " + id);
+                                });
+                            }, 25000);
+                        }
                     }).catch((err) => console.error(err));
                 }
 
-                roomStore.removeEntriesByRemoteRoomId(id).then(() => {
-                    console.log("Successfully removed room by id");
-                }).catch((err) => console.error(err));
+                if(!customBridge) {
+                    roomStore.removeEntriesByRemoteRoomId(id).then(() => {
+                        console.log("Successfully removed room by id");
+                    }).catch((err) => console.error(err));
+                }
             }
         });
     }

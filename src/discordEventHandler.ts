@@ -72,20 +72,61 @@ export class DiscordEventHandler {
                         } else {
                             message.reply("Incorrect format, $invite [user address]");
                         }
+                    } else if(message.cleanContent.startsWith("$unbridge")) {
+                        if(!message.member.hasPermission(Discord.Permissions.FLAGS.MANAGE_GUILD)) {
+                            message.reply("You do not have the MANAGE_GUILD permission needed for this command.");
+                        }
+
+                        if(remoteRoom.data.customBridge) {
+                            message.channel.send("**This room is now** ***no longer*** **custom bridged.**");
+
+                            let roomNumber = (message.channel.id.substr(message.channel.id.length - 4));
+                            let part2 = (message.channel as Discord.TextChannel).name + ";" + roomNumber;
+
+                            this.discordBot.handleChannelDelete(roomNumber, (message.channel as Discord.TextChannel).name, message.channel.id, "The Discord channel this room is bridged to is being unbridged.", true);
+
+                            bridgeStore.removeEntriesByRemoteRoomId(part2).then(() => {
+                                remoteRoom.data.customBridge = false;
+                                bridgeStore.upsertEntry({
+                                    id: part2,
+                                    matrix: null,
+                                    remote: remoteRoom.remote,
+                                    data: remoteRoom.data
+                                }).then(() => {
+                                    // Go through each member in the channel, and remove them from the room
+                                    (message.channel as Discord.TextChannel).members.forEach((member, key, map) => {
+                                        let userIntent = discordBot.getBridge().matrixAppservice.getIntentForUser(member.user.id);
+                                        userIntent.leave(remoteRoom.matrix.roomId);
+                                    });
+                                }).catch((err) => console.error(err));
+                            });
+                        } else {
+                            message.reply("This room is not custom bridged!");
+                        }
                     }
                 } else {
                     processDiscordToMatrixMessage(message, discordBot, roomId, intent);
                 }
             } else {
                 if(message.cleanContent.startsWith("$bridge")) {
+                    if(!message.member.hasPermission(Discord.Permissions.FLAGS.MANAGE_GUILD)) {
+                        message.reply("You do not have the MANAGE_GUILD permission needed for this command.");
+                    }
+
                     let split = message.cleanContent.split(" ");
 
+                    // TODO: Check permissions for bridging
+
                     if(split.length > 1) {
-                        console.log(remoteRoom);
+                        if(remoteRoom.data.customBridge) {
+                            message.reply("This room is already custom bridged!");
+                            return;
+                        }
 
                         let part2 = (message.channel as Discord.TextChannel).name + ";" + (message.channel.id.substr(message.channel.id.length - 4));
 
                         console.log("New bridged room: " + split[1]);
+                        message.channel.send("**This room is now** ***custom*** **bridged to:** *" + split[1] + "*");
 
                         let matrixRoom = new MatrixRoom(split[1]);
 
@@ -94,7 +135,7 @@ export class DiscordEventHandler {
                         bridgeStore.removeEntriesByRemoteRoomId(part2).then(() => {
                             bridgeStore.linkRooms(matrixRoom, remoteRoom.remote, remoteRoom.data, part2).then(() => {
                                 discordBot.getBridge().matrixAppservice.matrixBridge.getIntent().join(split[1]).then(() => {
-                                    // Go through each member in the channel
+                                    // Go through each member in the channel and add them to the room
                                     (message.channel as Discord.TextChannel).members.forEach((member, key, map) => {
                                         let userIntent = discordBot.getBridge().matrixAppservice.getIntentForUser(member.user.id);
 
