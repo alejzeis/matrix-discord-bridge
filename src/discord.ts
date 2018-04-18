@@ -162,15 +162,9 @@ export class DiscordBot {
                             fs.unlinkSync(downloadedLocation); // Remove the temporary avatar file we downloaded
 
                             userIntent.setAvatarUrl(url).then(() => {
-                                let newUser = new RemoteUser(member.user.id);
+                                user.set("avatar", member.user.avatar);
 
-                                newUser.set("avatar", member.user.avatar);
-                                newUser.set("rooms", user.data.rooms);
-                                newUser.set("name", name);
-
-                                userStore.delete({id: member.user.id }).then(() => {
-                                    userStore.setRemoteUser(newUser);
-                                });
+                                userStore.setRemoteUser(user);
                             });
                         });
                     });
@@ -182,15 +176,7 @@ export class DiscordBot {
                         userIntent.join(remoteRoomEntry.matrix.roomId).then(() => {
                             user.data.rooms.push(remoteRoomEntry.remote.get("channel"));
 
-                            let newUser = new RemoteUser(member.user.id);
-
-                            newUser.set("avatar", member.user.avatar);
-                            newUser.set("rooms", user.data.rooms);
-                            newUser.set("name", name);
-
-                            userStore.delete({id: member.user.id }).then(() => {
-                                userStore.setRemoteUser(newUser);
-                            });
+                            userStore.setRemoteUser(user);
                         });
                     });
                 }
@@ -198,15 +184,9 @@ export class DiscordBot {
                 // Set our display name if it's changed
                 if(user.data.name != name) {
                     userIntent.setDisplayName(name + (member.user.bot ? " [BOT]" : "") + " (Discord)").then(() => {
-                        let newUser = new RemoteUser(member.user.id);
+                        user.set("name", name);
 
-                        newUser.set("avatar", member.user.avatar);
-                        newUser.set("rooms", user.data.rooms);
-                        newUser.set("name", name);
-
-                        userStore.delete({id: member.user.id }).then(() => {
-                            userStore.setRemoteUser(newUser);
-                        });
+                        userStore.setRemoteUser(user);
                     });
                 }
             } else {

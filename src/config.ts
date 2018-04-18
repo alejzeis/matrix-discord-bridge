@@ -11,6 +11,7 @@ const defaultConfig = {
     },
     matrix: {
         serverURL: "https://matrix.org",
+        accessURL: "https://matrix.org",
         domain: "matrix.org",
         bridgeAccount: {
             userId: "@example:matrix.org",
@@ -45,6 +46,7 @@ export interface DiscordConfig {
 
 export interface MatrixConfig {
     serverURL: string;
+    accessURL: string;
     domain: string;
     bridgeAccount: { userId: string, password: string };
 }

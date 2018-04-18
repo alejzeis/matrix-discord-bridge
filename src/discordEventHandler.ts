@@ -47,6 +47,8 @@ export class DiscordEventHandler {
     public onMessage(message: Discord.Message) {
         // We don't want echo from our bot (eg. sending messages to matrix that are from our own bot on discord)
         if(message.author.username == this.discordBot.getBridge().config.discord.username) return;
+        // We don't want echo from our webhook bots
+        if(message.webhookID) return;
 
         let discordBot = this.discordBot;
         let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(message.author.id);

@@ -1,4 +1,6 @@
 import { TextChannel } from "discord.js";
+import { MatrixUser } from "matrix-appservice-bridge";
+
 import { MatrixAppservice, appserviceUserPart } from "./matrix";
 
 import { processMatrixToDiscordMessage } from "./messageHandling";
@@ -14,6 +16,7 @@ export class MatrixEventHandler {
         let event = request.getData();
 
         let roomStore = this.matrix.matrixBridge.getRoomStore();
+        let userStore = this.matrix.matrixBridge.getUserStore();
         let intent = this.matrix.matrixBridge.getIntent();
 
         switch(event.content.membership) {
@@ -21,6 +24,17 @@ export class MatrixEventHandler {
                 //TODO
                 break;
             case "join":
+                userStore.getMatrixUser(event.state_key).then((user) => {
+                    if(user == null) {
+                        console.log("Inserting new Matrix User");
+                        let matrixUser = new MatrixUser(event.state_key);
+                        matrixUser.set("webhooks", {});
+                        matrixUser.set("avatarURL", event.content.avatar_url);
+                        matrixUser.setDisplayName(event.content.displayname);
+
+                        userStore.setMatrixUser(matrixUser);
+                    }
+                });
             case "leave":
             case "ban":
                 if(event.state_key.startsWith("@" + appserviceUserPart)) return;
@@ -80,7 +94,7 @@ export class MatrixEventHandler {
                     return;
                 }
 
-                processMatrixToDiscordMessage(event, channel, this.matrix.getBridge().config.matrix.serverURL);
+                processMatrixToDiscordMessage(event, channel, this.matrix.getBridge().config.matrix.serverURL, this.matrix);
             }
         });
     }
