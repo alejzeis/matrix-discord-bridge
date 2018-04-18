@@ -5,6 +5,8 @@ import { tmpdir } from "os";
 import { join, extname } from "path";
 import { mkdirSync, createWriteStream } from "fs";
 
+import { BridgeConfig } from "./config";
+
 var tempDir = join(tmpdir(), "matrix-discord-bridge");
 
 try {
@@ -27,6 +29,11 @@ export function download(url: string, filename: string, callback: (contentType: 
 
         request(url).pipe(createWriteStream(downloadedLocation)).on('close', () => callback(contentType, downloadedLocation));
     });
+}
+
+export function getMXCDownloadURL(mxcURL: string, config: BridgeConfig): string {
+    let mxcURLClean = mxcURL.replace("mxc://", "");
+    return config.matrix.accessURL + "/_matrix/media/v1/download/" + mxcURLClean;
 }
 
 export function uploadMatrix(stream, filename: string, mimetype: string, client): Promise<string> {

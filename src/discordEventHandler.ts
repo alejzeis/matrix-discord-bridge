@@ -36,6 +36,30 @@ export class DiscordEventHandler {
             let roomNumber = channel.id.substr(channel.id.length - 4);
             let domain = this.discordBot.getBridge().config.matrix.domain;
 
+            // Delete the old webhooks for this channel from the database
+            this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore().getByMatrixData({
+                webhookUser: true
+            }).then((users: Array<any>) => {
+                users.forEach((user) => {
+                    let userWebhooks = user.get("webhooks");
+                    console.log("Found user: " + user.getDisplayName());
+
+                    if(userWebhooks && Object.keys(userWebhooks).length > 0) { // Check if webhooks dictionary is empty or not
+                        console.log("Not empty")
+                        if(userWebhooks[channel.id]) { // check if there is a webhook for the to-be-deleted channel
+                            console.log("Found webhook");
+                            delete userWebhooks[channel.id]; // Remove that webhook entry for that channel
+
+                            console.log("Deleted");
+
+                            this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore().setMatrixUser(user).then(() => {
+                                console.log("deleted");
+                            });
+                        }
+                    }
+                });
+            });
+
             this.discordBot.handleChannelDelete(roomNumber, channel.name, channel.id);
         }
     }
@@ -47,6 +71,8 @@ export class DiscordEventHandler {
     public onMessage(message: Discord.Message) {
         // We don't want echo from our bot (eg. sending messages to matrix that are from our own bot on discord)
         if(message.author.username == this.discordBot.getBridge().config.discord.username) return;
+        // We don't want echo from our webhook bots
+        if(message.webhookID) return;
 
         let discordBot = this.discordBot;
         let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(message.author.id);

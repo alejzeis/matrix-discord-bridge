@@ -5,6 +5,7 @@ import * as matrix from "./matrix";
 
 import * as util from "./util";
 
+import { DiscordMatrixBridge } from "./main";
 import { DiscordBot } from "./discord";
 import { MatrixAppservice } from "./matrix";
 
@@ -103,41 +104,91 @@ export function processDiscordToMatrixMessage(message: Discord.Message, discordB
     }
 }
 
-export function processMatrixToDiscordMessage(event, channel: Discord.TextChannel, serverURL: string) {
+let webhookCreationLock = {};
+
+export function processMatrixToDiscordMessage(event, channel: Discord.TextChannel, serverURL: string, appservice: MatrixAppservice) {
     let sentMessage: string;
 
-    switch(event.content.msgtype) {
-        case "m.text":
-            channel.send("**" + event.sender + "**: " + event.content.body);
-            return;
-
-        case "m.file":
-            sentMessage = "sent a file: ";
-            break;
-        case "m.image":
-            sentMessage = "sent an image: ";
-            break;
-        case "m.video":
-            sentMessage = "sent a video: ";
-            break;
-        case "m.audio":
-            sentMessage = "sent an audio file: ";
-            break;
-
-        default:
-            return;
+    if(webhookCreationLock[event.sender]) {
+        setTimeout(function() {
+            processMatrixToDiscordMessage(event, channel, serverURL, appservice);
+        }, 200);
+        return;
     }
 
-    let downloadURL = serverURL + "/_matrix/media/v1/download/" + event.content.url.replace("mxc://", "");
-    // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
-    if(event.content.info.size >= (1024*1024*8)) {
-        // File is too big, send link then
-        channel.send("**" + event.sender + "**: ***" + sentMessage + "*** " + downloadURL);
-    } else {
-        util.download(downloadURL, event.content.body, (contentType, downloadedLocation) => {
-            channel.send("**" + event.sender + "**: ***" + sentMessage + "*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
-                .then(() => unlinkSync(downloadedLocation));
-                // Delete the image we downloaded after we uploaded it
+    getWebhook(event, channel, appservice.getBridge()).then((webhook) => {
+        switch(event.content.msgtype) {
+            case "m.text":
+                webhook.send("**" + event.sender + "**: " + event.content.body);
+                return;
+
+            case "m.file":
+                sentMessage = "sent a file: ";
+                break;
+            case "m.image":
+                sentMessage = "sent an image: ";
+                break;
+            case "m.video":
+                sentMessage = "sent a video: ";
+                break;
+            case "m.audio":
+                sentMessage = "sent an audio file: ";
+                break;
+
+            default:
+                return;
+        }
+
+        let downloadURL = util.getMXCDownloadURL(event.content.url, appservice.getBridge().config);
+        // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
+        if(event.content.info.size >= (1024*1024*8)) {
+            // File is too big, send link then
+            webhook.send("**" + event.sender + "**: ***" + sentMessage + "*** " + downloadURL);
+        } else {
+            util.download(downloadURL, event.content.body, (contentType, downloadedLocation) => {
+                webhook.send("**" + event.sender + "**: ***" + sentMessage + "*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
+                    .then(() => unlinkSync(downloadedLocation));
+                    // Delete the image we downloaded after we uploaded it
+            });
+        }
+    });
+}
+
+function getWebhook(event, channel: Discord.TextChannel, bridge: DiscordMatrixBridge): Promise<Discord.Webhook> {
+    let userStore = bridge.matrixAppservice.matrixBridge.getUserStore();
+
+    if(!webhookCreationLock[event.sender]) {
+        webhookCreationLock[event.sender] = true;
+    }
+
+    return new Promise((resolve, reject) => {
+        userStore.getMatrixUser(event.sender).then((user) => {
+            let userWebhooks = user.get("webhooks");
+            if(!userWebhooks) {
+                userWebhooks = {};
+            }
+
+            if(Object.keys(userWebhooks).length > 0) { // Check if webhooks dictionary is empty or not
+                if(userWebhooks[channel.id]) { // check if there is already a webhook in here
+                    channel.fetchWebhooks().then((webhooks) => {
+                        webhookCreationLock[event.sender] = false;
+                        resolve(webhooks.get(userWebhooks[channel.id]));
+                    });
+                    return;
+                }
+            }
+
+            // No webhooks found
+
+            channel.createWebhook(user.getDisplayName(), util.getMXCDownloadURL(user.get("avatarURL"), bridge.config)).then((webhook) => {
+                userWebhooks[channel.id] = webhook.id;
+                user.set("webhooks", userWebhooks);
+
+                userStore.setMatrixUser(user).then(() => {
+                    webhookCreationLock[event.sender] = false;
+                    resolve(webhook);
+                });
+            });
         });
-    }
+    });
 }
