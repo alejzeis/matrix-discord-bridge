@@ -180,7 +180,7 @@ function getWebhook(event, channel: Discord.TextChannel, bridge: DiscordMatrixBr
 
             // No webhooks found
 
-            channel.createWebhook(event.sender, util.getMXCDownloadURL(user.get("avatarURL"), bridge.config)).then((webhook) => {
+            channel.createWebhook(user.getDisplayName(), util.getMXCDownloadURL(user.get("avatarURL"), bridge.config)).then((webhook) => {
                 userWebhooks[channel.id] = webhook.id;
                 user.set("webhooks", userWebhooks);
 
