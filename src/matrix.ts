@@ -179,13 +179,13 @@ export class MatrixAppservice {
 
         switch(event.type) {
             case "m.room.member":
-                if(event.age >= 5000) return;
+                if(event.age >= 20000) return;
                 if(event.sender == this.bridge.config.matrix.bridgeAccount.userId) return;
 
                 this.eventHandler.onRoomMemberEvent(request, context);
                 break;
             case "m.room.message":
-                if(event.age >= 5000) return;
+                if(event.age >= 20000) return;
                 if(event.sender == this.bridge.config.matrix.bridgeAccount.userId) return;
 
                 this.eventHandler.onRoomMessageEvent(request, context);
