@@ -15,6 +15,10 @@ export class MatrixEventHandler {
     public onRoomMemberEvent(request, context) {
         let event = request.getData();
 
+        // We don't want echo from our own bots or appservice
+        if(event.state_key.startsWith("@" + appserviceUserPart)) return;
+        if(event.state_key.startsWith("@!discord_")) return;
+
         let roomStore = this.matrix.matrixBridge.getRoomStore();
         let userStore = this.matrix.matrixBridge.getUserStore();
         let intent = this.matrix.matrixBridge.getIntent();
@@ -29,6 +33,7 @@ export class MatrixEventHandler {
                         console.log("Inserting new Matrix User");
                         let matrixUser = new MatrixUser(event.state_key);
                         matrixUser.set("webhooks", {});
+                        matrixUser.set("webhookUser", true);
                         matrixUser.set("avatarURL", event.content.avatar_url);
                         matrixUser.setDisplayName(event.content.displayname);
 
@@ -37,9 +42,6 @@ export class MatrixEventHandler {
                 });
             case "leave":
             case "ban":
-                if(event.state_key.startsWith("@" + appserviceUserPart)) return;
-                if(event.state_key.startsWith("@!discord_")) return;
-
                 roomStore.getEntriesByMatrixId(event.room_id).then((entries) => {
                     if(entries.length > 0) {
                         let entry = entries[0];
@@ -100,6 +102,30 @@ export class MatrixEventHandler {
     }
 
     private handleMissingChannelMapping(entry, channelId, channelName) {
+        // Delete the old webhooks for this channel from the database
+        this.matrix.matrixBridge.getUserStore().getByMatrixData({
+            webhookUser: true
+        }).then((users: Array<any>) => {
+            users.forEach((user) => {
+                let userWebhooks = user.get("webhooks");
+                console.log("Found user: " + user.getDisplayName());
+
+                if(userWebhooks && Object.keys(userWebhooks).length > 0) { // Check if webhooks dictionary is empty or not
+                    console.log("Not empty")
+                    if(userWebhooks[channelId]) { // check if there is a webhook for the to-be-deleted channel
+                        console.log("Found webhook");
+                        delete userWebhooks[channelId]; // Remove that webhook entry for that channel
+
+                        console.log("Deleted");
+
+                        this.matrix.matrixBridge.getUserStore().setMatrixUser(user).then(() => {
+                            console.log("deleted");
+                        });
+                    }
+                }
+            });
+        });
+
         this.matrix.getBridge().discordBot.handleChannelDelete(channelId.substr(channelId.length - 4), channelName, channelId);
     }
 }
