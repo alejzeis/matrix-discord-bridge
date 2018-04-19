@@ -119,20 +119,20 @@ export function processMatrixToDiscordMessage(event, channel: Discord.TextChanne
     getWebhook(event, channel, appservice.getBridge()).then((webhook) => {
         switch(event.content.msgtype) {
             case "m.text":
-                webhook.send("**" + event.sender + "**: " + event.content.body);
+                webhook.send(event.content.body);
                 return;
 
             case "m.file":
-                sentMessage = "sent a file: ";
+                sentMessage = "File:";
                 break;
             case "m.image":
-                sentMessage = "sent an image: ";
+                sentMessage = "Image:";
                 break;
             case "m.video":
-                sentMessage = "sent a video: ";
+                sentMessage = "Video:";
                 break;
             case "m.audio":
-                sentMessage = "sent an audio file: ";
+                sentMessage = "Audio:";
                 break;
 
             default:
@@ -143,10 +143,10 @@ export function processMatrixToDiscordMessage(event, channel: Discord.TextChanne
         // Check if file size is greater than 8 MB, discord does not allow files greater than 8 MB
         if(event.content.info.size >= (1024*1024*8)) {
             // File is too big, send link then
-            webhook.send("**" + event.sender + "**: ***" + sentMessage + "*** " + downloadURL);
+            webhook.send("**" + sentMessage + "** " + downloadURL);
         } else {
             util.download(downloadURL, event.content.body, (contentType, downloadedLocation) => {
-                webhook.send("**" + event.sender + "**: ***" + sentMessage + "*** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
+                webhook.send("**" + sentMessage + "** " + event.content.body, new Discord.Attachment(downloadedLocation, event.content.body))
                     .then(() => unlinkSync(downloadedLocation));
                     // Delete the image we downloaded after we uploaded it
             });
