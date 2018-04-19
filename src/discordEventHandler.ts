@@ -5,6 +5,9 @@ import * as matrix from "./matrix";
 
 import { DiscordBot } from "./discord";
 import { processDiscordToMatrixMessage } from "./messageHandling";
+import { download } from "./util";
+
+import * as fs from "fs";
 
 export class DiscordEventHandler {
     private discordBot: DiscordBot;
@@ -203,5 +206,54 @@ export class DiscordEventHandler {
                 intent.sendTyping(roomId, typing);
             }
         }).catch((e) => { /* The room is probably not bridged, so ignore */ });
+    }
+
+    public onGuildMemberUpdate(oldMember: Discord.GuildMember, newMember: Discord.GuildMember) {
+        let discordBot = this.discordBot;
+        let userStore = this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore();
+
+        userStore.getRemoteUser(oldMember.user.id).then((user) => {
+            if(user != null) {
+                let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(oldMember.user.id);
+                let name = (newMember.nickname != null ? newMember.nickname : newMember.user.username);
+
+                // Set our display name if it's changed
+                if(user.data.name != name) {
+                    intent.setDisplayName(name + (newMember.user.bot ? " [BOT]" : "") + " (Discord)").then(() => {
+                        user.set("name", name);
+
+                        userStore.setRemoteUser(user);
+                    });
+                }
+            }
+        });
+    }
+
+    public onUserUpdate(oldUser: Discord.User, newUser: Discord.User) {
+        let discordBot = this.discordBot;
+        let userStore = this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore();
+
+        userStore.getRemoteUser(oldUser.id).then((user) => {
+            if(user != null) {
+                let intent = discordBot.getBridge().matrixAppservice.getIntentForUser(oldUser.id);
+
+                // Check if their avatar has changed
+                if(user.data.avatar != newUser.avatar) {
+                    let filename = newUser.avatar + ".png";
+
+                    download(newUser.avatarURL, filename, (mimetype, downloadedLocation) => {
+                        discordBot.getBridge().matrixAppservice.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype).then((url) => {
+                            fs.unlinkSync(downloadedLocation); // Remove the temporary avatar file we downloaded
+
+                            intent.setAvatarUrl(url).then(() => {
+                                user.set("avatar", newUser.avatar);
+
+                                userStore.setRemoteUser(user);
+                            });
+                        });
+                    });
+                }
+            }
+        });
     }
 }

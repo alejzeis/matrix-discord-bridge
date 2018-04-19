@@ -33,6 +33,8 @@ export class DiscordBot {
         this.client.on("message", this.eventHandler.onMessage.bind(this.eventHandler));
         this.client.on("typingStart", this.eventHandler.onTypingStart.bind(this.eventHandler));
         this.client.on("typingStop", this.eventHandler.onTypingStop.bind(this.eventHandler));
+        this.client.on("guildMemberUpdate", this.eventHandler.onGuildMemberUpdate.bind(this.eventHandler));
+        this.client.on("userUpdate", this.eventHandler.onUserUpdate.bind(this.eventHandler));
 
         self = this;
     }
