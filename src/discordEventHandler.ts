@@ -144,8 +144,6 @@ export class DiscordEventHandler {
 
                     let split = message.cleanContent.split(" ");
 
-                    // TODO: Check permissions for bridging
-
                     if(split.length > 1) {
                         if(remoteRoom.data.customBridge) {
                             message.reply("This room is already custom bridged!");
