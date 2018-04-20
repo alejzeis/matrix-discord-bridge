@@ -52,6 +52,8 @@ export class MatrixEventHandler {
                             case "join":
                                 let self = this;
                                 userStore.getMatrixUser(event.state_key).then((user) => {
+                                    let doUpdate = false;
+
                                     if(user == null) {
                                         console.log("Inserting new Matrix User");
                                         let matrixUser = new MatrixUser(event.state_key);
@@ -73,7 +75,7 @@ export class MatrixEventHandler {
                                         // Update the webhook
                                         self.updateDiscordWebhook(channel, user.get("webhooks")[channelId], event.content.displayname, null, self.matrix.getBridge().config);
 
-                                        userStore.setMatrixUser(user);
+                                        doUpdate = true;
                                     }
 
                                     if(user.get("avatarURL") !== event.content.avatar_url) {
@@ -84,7 +86,15 @@ export class MatrixEventHandler {
                                         // Update the webhook
                                         self.updateDiscordWebhook(channel, user.get("webhooks")[channelId], null, event.content.avatar_url, self.matrix.getBridge().config);
 
-                                        userStore.setMatrixUser(user);
+                                        doUpdate = true;
+                                    }
+
+                                    if(doUpdate) {
+                                        // Delay this by 10 seconds as if we update the database immediately, other room events will think the name or avatar
+                                        // did not change as it equals the one in the database, so wait to update the database to allow other events to process.
+                                        setTimeout(function() {
+                                            userStore.setMatrixUser(user);
+                                        }, 10000);
                                     }
                                 });
                                 break;
@@ -100,6 +110,7 @@ export class MatrixEventHandler {
                         intent.kick(event.room_id, event.state_key, "The Discord channel this room is bridged to is being deleted!");
                     }
                 });
+                break;
 
         }
     }
