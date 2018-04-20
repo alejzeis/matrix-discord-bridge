@@ -4,6 +4,7 @@ import { MatrixUser } from "matrix-appservice-bridge";
 import { MatrixAppservice, appserviceUserPart } from "./matrix";
 
 import { processMatrixToDiscordMessage } from "./messageHandling";
+import { getMXCDownloadURL } from "./util";
 
 export class MatrixEventHandler {
     private matrix: MatrixAppservice;
@@ -49,6 +50,7 @@ export class MatrixEventHandler {
                                 channel.send("***" + event.sender + "*** **invited** ***" + event.state_key + "*** **to the room**");
                                 break;
                             case "join":
+                                let self = this;
                                 userStore.getMatrixUser(event.state_key).then((user) => {
                                     if(user == null) {
                                         console.log("Inserting new Matrix User");
@@ -67,16 +69,22 @@ export class MatrixEventHandler {
                                         channel.send("***" + event.state_key + "*** **changed display name from** " + event.unsigned.prev_content.displayname + " **to** " + event.content.displayname);
 
                                         user.setDisplayName(event.content.displayname);
+
+                                        // Update the webhook
+                                        self.updateDiscordWebhook(channel, user.get("webhooks")[channelId], event.content.displayname, null, self.matrix.getBridge().config);
+
                                         userStore.setMatrixUser(user);
-                                        // TODO: Update webhook
                                     }
 
                                     if(user.get("avatarURL") !== event.content.avatar_url) {
                                         channel.send("***" + event.state_key + "*** **changed their avatar**");
 
                                         user.set("avatarURL", event.content.avatar_url);
+
+                                        // Update the webhook
+                                        self.updateDiscordWebhook(channel, user.get("webhooks")[channelId], null, event.content.avatar_url, self.matrix.getBridge().config);
+
                                         userStore.setMatrixUser(user);
-                                        // TODO: Update webhook
                                     }
                                 });
                                 break;
@@ -167,5 +175,13 @@ export class MatrixEventHandler {
         });
 
         this.matrix.getBridge().discordBot.handleChannelDelete(channelId.substr(channelId.length - 4), channelName, channelId);
+    }
+
+    // Update a webhook's name and avatar
+    private updateDiscordWebhook(channel: TextChannel, webhookId, name: string, mxcAvatarURL: string, bridgeConfig) {
+        channel.fetchWebhooks().then((webhooks) => {
+            let webhook = webhooks.get(webhookId);
+            webhook.edit((name == null ? webhook.name : name), (mxcAvatarURL == null ? webhook.avatar : getMXCDownloadURL(mxcAvatarURL, bridgeConfig)));
+        });
     }
 }
