@@ -18,6 +18,8 @@ export class MatrixEventHandler {
         // We don't want echo from our own bots or appservice
         if(event.state_key.startsWith("@" + appserviceUserPart)) return;
         if(event.state_key.startsWith("@!discord_")) return;
+        if(event.sender.startsWith("@" + appserviceUserPart)) return;
+        if(event.sender.startsWith("@!discord_")) return;
 
         let roomStore = this.matrix.matrixBridge.getRoomStore();
         let userStore = this.matrix.matrixBridge.getUserStore();
@@ -25,21 +27,7 @@ export class MatrixEventHandler {
 
         switch(event.content.membership) {
             case "invite":
-                //TODO
-                break;
             case "join":
-                userStore.getMatrixUser(event.state_key).then((user) => {
-                    if(user == null) {
-                        console.log("Inserting new Matrix User");
-                        let matrixUser = new MatrixUser(event.state_key);
-                        matrixUser.set("webhooks", {});
-                        matrixUser.set("webhookUser", true);
-                        matrixUser.set("avatarURL", event.content.avatar_url);
-                        matrixUser.setDisplayName(event.content.displayname);
-
-                        userStore.setMatrixUser(matrixUser);
-                    }
-                });
             case "leave":
             case "ban":
                 roomStore.getEntriesByMatrixId(event.room_id).then((entries) => {
@@ -57,8 +45,40 @@ export class MatrixEventHandler {
                         }
 
                         switch(event.content.membership) {
+                            case "invite":
+                                channel.send("***" + event.sender + "*** **invited** ***" + event.state_key + "*** **to the room**");
+                                break;
                             case "join":
-                                channel.send("***" + event.state_key + "*** **joined the room**");
+                                userStore.getMatrixUser(event.state_key).then((user) => {
+                                    if(user == null) {
+                                        console.log("Inserting new Matrix User");
+                                        let matrixUser = new MatrixUser(event.state_key);
+                                        matrixUser.set("webhooks", {});
+                                        matrixUser.set("webhookUser", true);
+                                        matrixUser.set("avatarURL", event.content.avatar_url);
+                                        matrixUser.setDisplayName(event.content.displayname);
+
+                                        userStore.setMatrixUser(matrixUser);
+
+                                        channel.send("***" + event.state_key + "*** **joined the room**");
+
+                                        return;
+                                    } else if(user.getDisplayName() !== event.content.displayname) {
+                                        channel.send("***" + event.state_key + "*** **changed display name from** " + event.unsigned.prev_content.displayname + " **to** " + event.content.displayname);
+
+                                        user.setDisplayName(event.content.displayname);
+                                        userStore.setMatrixUser(user);
+                                        // TODO: Update webhook
+                                    }
+
+                                    if(user.get("avatarURL") !== event.content.avatar_url) {
+                                        channel.send("***" + event.state_key + "*** **changed their avatar**");
+
+                                        user.set("avatarURL", event.content.avatar_url);
+                                        userStore.setMatrixUser(user);
+                                        // TODO: Update webhook
+                                    }
+                                });
                                 break;
                             case "leave":
                                 channel.send("***" + event.state_key + "*** **left the room**");
