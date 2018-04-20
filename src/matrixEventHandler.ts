@@ -80,7 +80,10 @@ export class MatrixEventHandler {
         let event = request.getData();
 
         let roomStore = this.matrix.matrixBridge.getRoomStore();
+        let userStore = this.matrix.matrixBridge.getUserStore();
         let intent = this.matrix.matrixBridge.getIntent();
+
+        let appServiceBot = this.matrix.matrixBridge.getBot();
 
         roomStore.getEntriesByMatrixId(event.room_id).then((entries) => {
             if(entries.length > 0) {
@@ -96,7 +99,24 @@ export class MatrixEventHandler {
                     return;
                 }
 
-                processMatrixToDiscordMessage(event, channel, this.matrix.getBridge().config.matrix.serverURL, this.matrix);
+                userStore.getMatrixUser(event.sender).then((user) => {
+                    if(user == null) {
+                        appServiceBot.getJoinedMembers(event.room_id).then((members) => {
+                            console.log("Inserting new Matrix User");
+                            let matrixUser = new MatrixUser(event.sender);
+                            matrixUser.set("webhooks", {});
+                            matrixUser.set("webhookUser", true);
+                            matrixUser.set("avatarURL", members[event.sender].avatar_url);
+                            matrixUser.setDisplayName(members[event.sender].display_name);
+
+                            userStore.setMatrixUser(matrixUser).then(() => {
+                                processMatrixToDiscordMessage(event, channel, this.matrix.getBridge().config.matrix.serverURL, this.matrix);
+                            });
+                        });
+                    } else {
+                        processMatrixToDiscordMessage(event, channel, this.matrix.getBridge().config.matrix.serverURL, this.matrix);
+                    }
+                });
             }
         });
     }
