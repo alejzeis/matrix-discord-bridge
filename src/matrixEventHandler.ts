@@ -66,7 +66,7 @@ export class MatrixEventHandler {
 
                                         return;
                                     } else if(user.getDisplayName() !== event.content.displayname) {
-                                        channel.send("***" + event.state_key + "*** **changed display name from** " + event.unsigned.prev_content.displayname + " **to** " + event.content.displayname);
+                                        channel.send("***" + event.state_key + "*** **changed display name from** " + user.getDisplayName() + " **to** " + event.content.displayname);
 
                                         user.setDisplayName(event.content.displayname);
 
