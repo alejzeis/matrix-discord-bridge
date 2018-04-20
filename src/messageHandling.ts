@@ -122,6 +122,11 @@ export function processMatrixToDiscordMessage(event, channel: Discord.TextChanne
                 webhook.send(event.content.body);
                 return;
 
+            case "m.emote":
+                // Discord's /me command just wraps the text in _ and _.
+                webhook.send("_" + event.content.body + "_");
+                return;
+
             case "m.file":
                 sentMessage = "File:";
                 break;
