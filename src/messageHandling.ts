@@ -185,7 +185,7 @@ function getWebhook(event, channel: Discord.TextChannel, bridge: DiscordMatrixBr
 
             // No webhooks found
 
-            channel.createWebhook(user.getDisplayName(), (user.get("avatarURL") != null ? util.getMXCDownloadURL(user.get("avatarURL"), bridge.config) : null)).then((webhook) => {
+            channel.createWebhook(user.getDisplayName() + " (Matrix)", (user.get("avatarURL") != null ? util.getMXCDownloadURL(user.get("avatarURL"), bridge.config) : null)).then((webhook) => {
                 userWebhooks[channel.id] = webhook.id;
                 user.set("webhooks", userWebhooks);
 

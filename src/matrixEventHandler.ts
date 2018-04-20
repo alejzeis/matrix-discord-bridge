@@ -181,7 +181,7 @@ export class MatrixEventHandler {
     private updateDiscordWebhook(channel: TextChannel, webhookId, name: string, mxcAvatarURL: string, bridgeConfig) {
         channel.fetchWebhooks().then((webhooks) => {
             let webhook = webhooks.get(webhookId);
-            webhook.edit((name == null ? webhook.name : name), (mxcAvatarURL == null ? webhook.avatar : getMXCDownloadURL(mxcAvatarURL, bridgeConfig)));
+            webhook.edit((name == null ? webhook.name : (name +  + " (Matrix)")), (mxcAvatarURL == null ? webhook.avatar : getMXCDownloadURL(mxcAvatarURL, bridgeConfig)));
         });
     }
 }
