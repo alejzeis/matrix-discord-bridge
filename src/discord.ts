@@ -9,7 +9,6 @@ import * as util from "./util";
 
 import * as fs from "fs";
 
-var self: DiscordBot;
 export class DiscordBot {
     private bridge: DiscordMatrixBridge;
     private client: Discord.Client;
@@ -25,7 +24,7 @@ export class DiscordBot {
 
         this.client = new Discord.Client();
 
-        this.client.on("ready", this.onReady);
+        this.client.on("ready", this.onReady.bind(this));
 
         this.client.on("channelCreate", this.eventHandler.onChannelCreate.bind(this.eventHandler));
         this.client.on("channelDelete", this.eventHandler.onChannelDelete.bind(this.eventHandler));
@@ -36,8 +35,6 @@ export class DiscordBot {
         this.client.on("guildMemberUpdate", this.eventHandler.onGuildMemberUpdate.bind(this.eventHandler));
         this.client.on("userUpdate", this.eventHandler.onUserUpdate.bind(this.eventHandler));
         this.client.on("presenceUpdate", this.eventHandler.onPresenceUpdate.bind(this.eventHandler));
-
-        self = this;
     }
 
     public run() {
@@ -49,20 +46,20 @@ export class DiscordBot {
     }
 
     public setupNewProvisionedRoom(room: string) {
-        let intent = self.bridge.matrixAppservice.matrixBridge.getIntent();
+        let intent = this.bridge.matrixAppservice.matrixBridge.getIntent();
 
-        self.bridge.matrixAppservice.matrixBridge.getRoomStore().getEntryById(room).then((entry) => {
+        this.bridge.matrixAppservice.matrixBridge.getRoomStore().getEntryById(room).then((entry) => {
             if(entry.matrix != null) {
                 let guildId = entry.remote.get("guild");
                 let channelId = entry.remote.get("channel");
 
-                let channel: Discord.TextChannel = self.client.guilds.get(guildId).channels.get(channelId) as Discord.TextChannel;
+                let channel: Discord.TextChannel = this.client.guilds.get(guildId).channels.get(channelId) as Discord.TextChannel;
 
                 // Go through each member in the channel
                 channel.members.forEach((member, key, map) => {
-                    let userIntent = self.bridge.matrixAppservice.getIntentForUser(member.user.id);
+                    let userIntent = this.bridge.matrixAppservice.getIntentForUser(member.user.id);
 
-                    self.setupNewUser(member, intent, userIntent, entry);
+                    this.setupNewUser(member, intent, userIntent, entry);
                 });
             }
         }).catch((err) => console.error(err));
@@ -71,28 +68,28 @@ export class DiscordBot {
     private onReady() {
         console.log("Connected to Discord.");
 
-        self.client.guilds.forEach((guild) => {
+        this.client.guilds.forEach((guild) => {
             guild.channels.forEach((channel) => {
                 if(channel instanceof Discord.TextChannel) {
-                    let permissions = channel.permissionsFor(self.client.user);
+                    let permissions = channel.permissionsFor(this.client.user);
                     let canAccess = permissions.has(Discord.Permissions.FLAGS.VIEW_CHANNEL);
                     let canInvite = permissions.has(Discord.Permissions.FLAGS.CREATE_INSTANT_INVITE);
 
                     if(canAccess) {
                         let roomNumber = channel.id.substr(channel.id.length - 4);
-                        let intent = self.bridge.matrixAppservice.matrixBridge.getIntent();
+                        let intent = this.bridge.matrixAppservice.matrixBridge.getIntent();
 
-                        self.tryInsertNewRemoteRoom(self, roomNumber, guild, channel, canInvite, canAccess).then(() => {
+                        this.tryInsertNewRemoteRoom(this, roomNumber, guild, channel, canInvite, canAccess).then(() => {
 
                             // Process and add users to room
 
-                            self.bridge.matrixAppservice.matrixBridge.getRoomStore().getEntryById(channel.name + ";" + roomNumber).then((entry) => {
+                            this.bridge.matrixAppservice.matrixBridge.getRoomStore().getEntryById(channel.name + ";" + roomNumber).then((entry) => {
                                 if(entry.matrix != null) {
                                     // Go through each member in the channel
                                     channel.members.forEach((member, key, map) => {
-                                        let userIntent = self.bridge.matrixAppservice.getIntentForUser(member.user.id);
+                                        let userIntent = this.bridge.matrixAppservice.getIntentForUser(member.user.id);
 
-                                        self.setupNewUser(member, intent, userIntent, entry);
+                                        this.setupNewUser(member, intent, userIntent, entry);
                                     });
                                 }
                             }).catch((err) => console.error(err));
@@ -102,9 +99,11 @@ export class DiscordBot {
             });
         });
 
-        self.setAllPresences.bind(self)();
+        this.setAllPresences();
+
+        let func = this.setAllPresences.bind(this);
         setInterval(function() {
-            self.setAllPresences.bind(self)();
+            func();
         }, 45000);
     }
 
@@ -144,14 +143,14 @@ export class DiscordBot {
                     };
 
                     // Create a new room as it didn't match our guild and channel, so it's a different discord room we found.
-                    self.tryInsertNewRemoteRoom(self, roomNumber - 1, guild, channel, canInvite, canAccess).then(() => resolve()).catch((err) => reject(err));
+                    this.tryInsertNewRemoteRoom(self, roomNumber - 1, guild, channel, canInvite, canAccess).then(() => resolve()).catch((err) => reject(err));
                 }
             });
         });
     }
 
     public setupNewUser(member: Discord.GuildMember, intent, userIntent, remoteRoomEntry) {
-        let userStore = self.bridge.matrixAppservice.matrixBridge.getUserStore();
+        let userStore = this.bridge.matrixAppservice.matrixBridge.getUserStore();
 
         userStore.getRemoteUser(member.user.id).then((user) => {
             if(user != null) {
@@ -163,7 +162,7 @@ export class DiscordBot {
                     let filename = member.user.avatar + ".png";
 
                     util.download(member.user.avatarURL, filename, (mimetype, downloadedLocation) => {
-                        self.bridge.matrixAppservice.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype).then((url) => {
+                        this.bridge.matrixAppservice.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype).then((url) => {
                             fs.unlinkSync(downloadedLocation); // Remove the temporary avatar file we downloaded
 
                             userIntent.setAvatarUrl(url).then(() => {
@@ -177,7 +176,7 @@ export class DiscordBot {
 
                 // Check if we've already joined that room
                 if(!user.data.rooms.includes(remoteRoomEntry.remote.get("channel"))) {
-                    intent.invite(remoteRoomEntry.matrix.roomId, "@!discord_" + member.user.id + ":" + self.bridge.config.matrix.domain).then(() => {
+                    intent.invite(remoteRoomEntry.matrix.roomId, "@!discord_" + member.user.id + ":" + this.bridge.config.matrix.domain).then(() => {
                         userIntent.join(remoteRoomEntry.matrix.roomId).then(() => {
                             user.data.rooms.push(remoteRoomEntry.remote.get("channel"));
 
@@ -211,14 +210,14 @@ export class DiscordBot {
                             let filename = uuidv4() + ".png";
 
                             util.download(member.user.avatarURL, filename, (mimetype, downloadedLocation) => {
-                                self.bridge.matrixAppservice.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype).then((url) => {
+                                this.bridge.matrixAppservice.uploadContent(fs.createReadStream(downloadedLocation), filename, mimetype).then((url) => {
                                     fs.unlinkSync(downloadedLocation); // Remove the temporary avatar file we downloaded
                                     userIntent.setAvatarUrl(url);
                                 });
                             });
                         }
 
-                        intent.invite(remoteRoomEntry.matrix.roomId, "@!discord_" + member.user.id + ":" + self.bridge.config.matrix.domain).then(() => {
+                        intent.invite(remoteRoomEntry.matrix.roomId, "@!discord_" + member.user.id + ":" + this.bridge.config.matrix.domain).then(() => {
                             userIntent.join(remoteRoomEntry.matrix.roomId);
                         });
                     })

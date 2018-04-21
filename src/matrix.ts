@@ -7,8 +7,6 @@ import { join } from "path";
 
 export const appserviceUserPart = "appservice-discord";
 
-var self: MatrixAppservice;
-
 export class MatrixAppservice {
     private bridge: DiscordMatrixBridge;
     private cli: Cli;
@@ -27,11 +25,10 @@ export class MatrixAppservice {
 
         this.registrationLocation = join(this.bridge.configurationDir, "appservice-registration.yml");
 
-        self = this;
         this.cli = new Cli({
-            registrationPath: self.registrationLocation,
-            generateRegistration: self.generateRegistration,
-            run: self.cliRun
+            registrationPath: this.registrationLocation,
+            generateRegistration: this.generateRegistration,
+            run: this.cliRun.bind(this)
         });
     }
 
@@ -46,21 +43,21 @@ export class MatrixAppservice {
     }
 
     private cliRun(port, cfg) {
-        self._matrixBridge = new Bridge({
-            homeserverUrl: self.bridge.config.matrix.serverURL,
-            domain: self.bridge.config.matrix.domain,
-            registration: self.registrationLocation,
+        this._matrixBridge = new Bridge({
+            homeserverUrl: this.bridge.config.matrix.serverURL,
+            domain: this.bridge.config.matrix.domain,
+            registration: this.registrationLocation,
 
             controller: {
-                onUserQuery: self.onUserQuery,
-                onAliasQuery: self.onAliasQuery,
-                onAliasQueried: self.onAliasQueried,
-                onEvent: self.onEvent.bind(self)
+                onUserQuery: this.onUserQuery.bind(this),
+                onAliasQuery: this.onAliasQuery.bind(this),
+                onAliasQueried: this.onAliasQueried.bind(this),
+                onEvent: this.onEvent.bind(this)
             }
         });
 
         console.log("Matrix AppService running on port %s", port);
-        self.matrixBridge.run(port, cfg);
+        this.matrixBridge.run(port, cfg);
     }
 
     public run() {
@@ -73,7 +70,7 @@ export class MatrixAppservice {
 
     public uploadContent(readStream, filename: string, mimetype: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            self.matrixBridge.getIntent().getClient().uploadContent({
+            this.matrixBridge.getIntent().getClient().uploadContent({
                 stream: readStream,
                 name: filename,
                 type: mimetype,
@@ -88,7 +85,7 @@ export class MatrixAppservice {
     }
 
     public getMatrixRoomFromDiscordInfo(guildId, channelId): Promise<any> {
-        let roomStore = self.matrixBridge.getRoomStore();
+        let roomStore = this.matrixBridge.getRoomStore();
 
         return new Promise((resolve, reject) => {
             roomStore.getEntriesByRemoteRoomData({
@@ -113,8 +110,8 @@ export class MatrixAppservice {
         let discordRoom = alias.split(":")[0].split("_")[1].replace("#!", "").replace("#", "");
         console.log("Alias queried " + alias + ", discord room: " + discordRoom);
 
-        let intent = self.matrixBridge.getIntent();
-        let roomStore = self.matrixBridge.getRoomStore();
+        let intent = this.matrixBridge.getIntent();
+        let roomStore = this.matrixBridge.getRoomStore();
 
         return new Promise((resolve, reject) => {
             roomStore.getEntriesByRemoteId(discordRoom).then((values) => {
@@ -128,7 +125,7 @@ export class MatrixAppservice {
                     entry.id = discordRoom;
 
                     roomStore.upsertEntry(entry).then(() => {
-                        self.bridge.discordBot.setupNewProvisionedRoom(discordRoom);
+                        this.bridge.discordBot.setupNewProvisionedRoom(discordRoom);
                     });
                 })
             });
@@ -139,8 +136,8 @@ export class MatrixAppservice {
         let discordRoom = aliasLocalpart.split("_")[1].replace("#", "");
         console.log("Processing alias for " + alias + " (" + aliasLocalpart + ")" + ", discord room is: " + discordRoom);
 
-        let intent = self.matrixBridge.getIntent();
-        let roomStore = self.matrixBridge.getRoomStore();
+        let intent = this.matrixBridge.getIntent();
+        let roomStore = this.matrixBridge.getRoomStore();
 
         return new Promise((resolve, reject) => {
             roomStore.getEntriesByRemoteId(discordRoom).then((values) => {
