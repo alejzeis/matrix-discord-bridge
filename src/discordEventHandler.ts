@@ -254,4 +254,15 @@ export class DiscordEventHandler {
             }
         });
     }
+
+    public onPresenceUpdate(oldMember: Discord.GuildMember, newMember: Discord.GuildMember) {
+        let discordBot = this.discordBot;
+        let userStore = this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore();
+
+        userStore.getRemoteUser(oldMember.user.id).then((user) => {
+            if(user != null) {
+                this.discordBot.setPresenceForMember(newMember);
+            }
+        });
+    }
 }

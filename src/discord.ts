@@ -35,6 +35,7 @@ export class DiscordBot {
         this.client.on("typingStop", this.eventHandler.onTypingStop.bind(this.eventHandler));
         this.client.on("guildMemberUpdate", this.eventHandler.onGuildMemberUpdate.bind(this.eventHandler));
         this.client.on("userUpdate", this.eventHandler.onUserUpdate.bind(this.eventHandler));
+        this.client.on("presenceUpdate", this.eventHandler.onPresenceUpdate.bind(this.eventHandler));
 
         self = this;
     }
@@ -101,8 +102,10 @@ export class DiscordBot {
             });
         });
 
-        self.setPresences.bind(self)();
-        setInterval(self.setPresences.bind(self), 30000);
+        self.setAllPresences.bind(self)();
+        setInterval(function() {
+            self.setAllPresences.bind(self)();
+        }, 45000);
     }
 
     public tryInsertNewRemoteRoom(self: DiscordBot, roomNumber, guild: Discord.Guild, channel: Discord.TextChannel, canInvite: boolean, canAccess: boolean): Promise<any> {
@@ -294,8 +297,59 @@ export class DiscordBot {
         });
     }
 
-    private setPresences() {
-        let roomStore = self.bridge.matrixAppservice.matrixBridge.getRoomStore();
+    public setPresenceForMember(member: Discord.GuildMember) {
+        let intent = this.getBridge().matrixAppservice.getIntentForUser(member.user.id);
+
+        let state;
+        let msg = "";
+
+        switch(member.presence.status) {
+            case "online":
+            case "offline":
+                state = member.presence.status;
+                msg = (member.presence.status == "online" ? "[Online]" : "[Offline]")
+                break;
+            case "dnd":
+            case "idle":
+                state = "unavailable";
+                msg = (member.presence.status == "idle" ? "[Idle]" : "[Do not Disturb]");
+                break;
+        }
+
+        if(member.presence.game != null) {
+            switch(member.presence.game.type) {
+                case 2:
+                    msg += (" Listening to " + member.presence.game.name);
+                    break;
+                default:
+                    if(member.presence.game.streaming) {
+                        msg += (" Streaming " + member.presence.game.name);
+                    } else {
+                        msg += (" Playing " + member.presence.game.name);
+                    }
+                    break;
+            }
+        }
+
+        intent.getClient().setPresence({
+            presence: state,
+            status_msg: msg
+        });
+    }
+
+    private setPresencesForGuild(guildId, users = Array()) {
+        this.client.guilds.get(guildId).members.forEach((member) => {
+            // Check if we've already updated the presence for this user
+            if(!users.includes(member.user.id)) {
+                this.setPresenceForMember(member);
+
+                users.push(member.user.id);
+            }
+        });
+    }
+
+    private setAllPresences() {
+        let roomStore = this.bridge.matrixAppservice.matrixBridge.getRoomStore();
 
         let users = new Array();
 
@@ -306,26 +360,7 @@ export class DiscordBot {
                 if(entry.matrix != null) {
                     let guildId = entry.remote.get("guild");
 
-                    this.client.guilds.get(guildId).members.forEach((member) => {
-                        // Check if we've already updated the presence for this user
-                        if(!users.includes(member.user.id)) {
-                            switch(member.presence.status) {
-                                case "online":
-                                case "offline":
-                                    this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence(member.presence.status);
-                                    break;
-                                case "dnd":
-                                case "idle":
-                                    this.bridge.matrixAppservice.getIntentForUser(member.user.id).getClient().setPresence({
-                                        presence: "unavailable",
-                                        status_msg: (member.presence.status == "dnd" ? "Do not Disturb" : "Idle")
-                                    });
-                                    break;
-                            }
-
-                            users.push(member.user.id);
-                        }
-                    });
+                    this.setPresencesForGuild(guildId, users);
                 }
             })
         })
