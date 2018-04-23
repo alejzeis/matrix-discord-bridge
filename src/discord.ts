@@ -228,7 +228,7 @@ export class DiscordBot {
         });
     }
 
-    public handleChannelDelete(roomNumber, channelName: string, channelId, kickMessage: string = "The Discord channel this room was bridged to was deleted.", customBridge = false) {
+    public handleChannelDelete(roomNumber, channelName: string, channelId, kickMessage: string = "The Discord channel this room was bridged to was deleted.", customBridge = false, deleteRoom = true) {
         let id = channelName + ";" + roomNumber;
 
         let roomStore = this.getBridge().matrixAppservice.matrixBridge.getRoomStore();
@@ -248,20 +248,14 @@ export class DiscordBot {
 
                                     userStore.getRemoteUser(id).then((user) => {
                                         if(user != null) {
-                                            let newUser = new RemoteUser(id);
-
                                             // Remove that channel from the rooms array
                                             let index = user.data.rooms.indexOf(channelId);
                                             if(index > -1)
                                                 user.data.rooms.splice(index, 1);
 
-                                            newUser.set("avatar", user.data.avatar);
-                                            newUser.set("rooms", user.data.rooms);
-                                            newUser.set("name", user.data.name);
+                                            user.set("rooms", user.data.rooms);
 
-                                            userStore.delete({id: id }).then(() => {
-                                                userStore.setRemoteUser(newUser);
-                                            });
+                                            userStore.setRemoteUser(user);
                                         } else {
                                             this.bridge.logger.error("Member is null while attempting to process room deletion. ", {id: id});
                                         }
@@ -276,7 +270,7 @@ export class DiscordBot {
                             }
                         }
 
-                        if(!customBridge) { // We want to stay in the room if it's a custom bridge, the owner can remove us if they want to
+                        if(!customBridge || (!customBridge && !deleteRoom)) { // We want to stay in the room if it's a custom bridge, the owner can remove us if they want to
                             // Leave the room after 25 seconds to allow processing of kicking
                             let logger = this.bridge.logger;
                             setTimeout(function() {
@@ -288,7 +282,7 @@ export class DiscordBot {
                     }).catch((err) => this.bridge.logger.error(err));
                 }
 
-                if(!customBridge) {
+                if(!customBridge && deleteRoom) {
                     roomStore.removeEntriesByRemoteRoomId(id).then(() => {
                         this.bridge.logger.verbose("Successfully removed deleted room " + id + " from database");
                     }).catch((err) => this.bridge.logger.error(err));
