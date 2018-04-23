@@ -3,6 +3,8 @@ import * as YAML from "yamljs";
 import { writeFileSync } from "fs";
 import { exit } from "process";
 
+import { LoggerInstance } from "winston";
+
 const defaultConfig = {
     initalSyncAvatars: true,
     discord: {
@@ -21,13 +23,13 @@ const defaultConfig = {
     guilds: []
 };
 
-export function loadConfig(location: string) {
+export function loadConfig(location: string, logger: LoggerInstance) {
     try {
         return YAML.load(location);
     } catch(e) {
-        console.error("Could not load " + location + ", perhaps it doesn't exist? Creating it...");
+        logger.warn("Could not load configuration file, perhaps it doesn't exist? Creating it...", { location: location });
         writeFileSync(location, YAML.stringify(defaultConfig, 4));
-        console.error("Configuration file created. Please fill out the fields and then run the program again.")
+        logger.info("Configuration file created, please fill out the fields and run the bridge again.");
         exit(1);
     }
 }

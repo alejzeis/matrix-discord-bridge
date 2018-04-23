@@ -16,12 +16,15 @@
   },
   "homepage": "https://github.com/jython234/matrix-discord-bridge#readme",
   "dependencies": {
+    "@types/dateformat": "^1.0.1",
     "@types/mime": "^2.0.0",
     "@types/node": "^9.6.5",
     "@types/request": "^2.47.0",
     "@types/showdown": "^1.7.3",
     "@types/uuid": "^3.4.3",
+    "@types/winston": "^2.3.9",
     "@types/yamljs": "^0.2.30",
+    "dateformat": "^3.0.3",
     "discord.js": "^11.3.2",
     "matrix-appservice-bridge": "^1.4.0",
     "matrix-js-sdk": "^0.10.1",
@@ -30,6 +33,9 @@
     "request": "^2.85.0",
     "showdown": "^1.8.6",
     "uuid": "^3.2.1",
+    "winston": "^2.4.2",
+    "winston-daily-rotate-file": "^3.1.2",
+    "winston-error": "^1.0.1",
     "yamljs": "^0.3.0"
   }
 }

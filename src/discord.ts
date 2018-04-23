@@ -62,11 +62,11 @@ export class DiscordBot {
                     this.setupNewUser(member, intent, userIntent, entry);
                 });
             }
-        }).catch((err) => console.error(err));
+        }).catch((err) => this.bridge.logger.error(err));
     }
 
     private onReady() {
-        console.log("Connected to Discord.");
+        this.bridge.logger.info("Discord bot connected.");
 
         this.client.guilds.forEach((guild) => {
             guild.channels.forEach((channel) => {
@@ -92,7 +92,7 @@ export class DiscordBot {
                                         this.setupNewUser(member, intent, userIntent, entry);
                                     });
                                 }
-                            }).catch((err) => console.error(err));
+                            }).catch((err) => this.bridge.logger.error(err));
                         });
                     }
                 }
@@ -114,9 +114,9 @@ export class DiscordBot {
         let roomId = channel.name + ";" + roomNumber;
         return new Promise((resolve, reject) => {
             roomStore.getEntryById(roomId).then((entry) => {
-                console.log("Entry for (" + roomId + "): " + entry);
+                //console.log("Entry for (" + roomId + "): " + entry);
                 if(entry == null) {
-                    console.log("Creating entry and inserting.");
+                    //console.log("Creating entry and inserting.");
                     let room = new RemoteRoom(roomId);
                     room.set("type", "discord-text");
                     room.set("guild", guild.id);
@@ -224,7 +224,7 @@ export class DiscordBot {
                 });
             }
         }).catch((err) => {
-            console.error(err);
+            this.bridge.logger.error(err);
         });
     }
 
@@ -263,7 +263,7 @@ export class DiscordBot {
                                                 userStore.setRemoteUser(newUser);
                                             });
                                         } else {
-                                            console.error("Member is null while attempting to processes room deletion, id: " + id);
+                                            this.bridge.logger.error("Member is null while attempting to process room deletion. ", {id: id});
                                         }
                                     });
 
@@ -278,19 +278,20 @@ export class DiscordBot {
 
                         if(!customBridge) { // We want to stay in the room if it's a custom bridge, the owner can remove us if they want to
                             // Leave the room after 25 seconds to allow processing of kicking
+                            let logger = this.bridge.logger;
                             setTimeout(function() {
                                 intent.leave(entry.matrix.roomId).then(() => {
-                                    console.log("Finally left room: " + id);
+                                    logger.debug("Finally left room that was being deleted: " + id);
                                 });
                             }, 25000);
                         }
-                    }).catch((err) => console.error(err));
+                    }).catch((err) => this.bridge.logger.error(err));
                 }
 
                 if(!customBridge) {
                     roomStore.removeEntriesByRemoteRoomId(id).then(() => {
-                        console.log("Successfully removed room by id");
-                    }).catch((err) => console.error(err));
+                        this.bridge.logger.verbose("Successfully removed deleted room " + id + " from database");
+                    }).catch((err) => this.bridge.logger.error(err));
                 }
             }
         });
@@ -330,9 +331,13 @@ export class DiscordBot {
             }
         }
 
-        intent.getClient().setPresence({
+        let presenceObj = {
             presence: state,
             status_msg: msg
+        };
+
+        intent.getClient().setPresence(presenceObj).then(() => {
+            this.bridge.logger.verbose("Set Presence for member: " + member.nickname + " (user: " + member.user.username + ")", presenceObj);
         });
     }
 

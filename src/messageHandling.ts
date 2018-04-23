@@ -77,8 +77,12 @@ export function processDiscordToMatrixMessage(message: Discord.Message, discordB
                                     .done(() => unlinkSync(downloadedLocation)); // Delete the temporary downloaded file once we are all done
                             });
                         }).catch((err) => {
-                            console.error("Error while attempting to read audio file duration.")
-                            console.error(err);
+                            discordBot.getBridge().logger.warn("Failed to read audio file duration due to error. ", {
+                                errorMessage: err.message,
+                                filename: attachment.filename,
+                                matrixRoomId: matrixRoomId,
+                                user: message.author.username
+                            });
                         });
                     } else {
                         // We can't figure out the duration, so send anyway

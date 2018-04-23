@@ -28,7 +28,7 @@ export class DiscordEventHandler {
 
                 this.discordBot.tryInsertNewRemoteRoom(this.discordBot, roomNumber, channel.guild, channel, canInvite, canAccess).then(() => {
                     channel.send("**This room is now bridged to:** *#!discord_#" + channel.name + ";" + roomNumber + ":" + domain + "*");
-                    console.log("Successfully added new remote room " + channel.name + ";" + roomNumber);
+                    this.discordBot.getBridge().logger.info("Successfully bridged new channel " + channel.name);
                 });
             }
         }
@@ -39,25 +39,20 @@ export class DiscordEventHandler {
             let roomNumber = channel.id.substr(channel.id.length - 4);
             let domain = this.discordBot.getBridge().config.matrix.domain;
 
+            this.discordBot.getBridge().logger.info("Processing channel deletion: " + channel.id + " #" + channel.name);
+
             // Delete the old webhooks for this channel from the database
             this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore().getByMatrixData({
                 webhookUser: true
             }).then((users: Array<any>) => {
                 users.forEach((user) => {
                     let userWebhooks = user.get("webhooks");
-                    console.log("Found user: " + user.getDisplayName());
 
                     if(userWebhooks && Object.keys(userWebhooks).length > 0) { // Check if webhooks dictionary is empty or not
-                        console.log("Not empty")
                         if(userWebhooks[channel.id]) { // check if there is a webhook for the to-be-deleted channel
-                            console.log("Found webhook");
                             delete userWebhooks[channel.id]; // Remove that webhook entry for that channel
 
-                            console.log("Deleted");
-
-                            this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore().setMatrixUser(user).then(() => {
-                                console.log("deleted");
-                            });
+                            this.discordBot.getBridge().matrixAppservice.matrixBridge.getUserStore().setMatrixUser(user);
                         }
                     }
                 });
@@ -94,8 +89,9 @@ export class DiscordEventHandler {
                             intent.invite(roomId, split[1]).then(() => {
                                 message.reply("Invited *" + split[1] + "* to the room.");
                             }).catch((e) => {
-                                console.error("Error while attempting to process room invite from discord to matrix.");
-                                console.error(e);
+                                this.discordBot.getBridge().logger.error("While attempting to process room invite from discord to matrix:");
+                                this.discordBot.getBridge().logger.error(e);
+
                                 message.reply("Sorry, there was an error while processing.");
                             });
                         } else {
@@ -107,6 +103,7 @@ export class DiscordEventHandler {
                         }
 
                         if(remoteRoom.data.customBridge) {
+                            this.discordBot.getBridge().logger.info("Deleting custom bridged discord channel #" + (message.channel as Discord.TextChannel));
                             message.channel.send("**This room is now** ***no longer*** **custom bridged.**");
 
                             let roomNumber = (message.channel.id.substr(message.channel.id.length - 4));
@@ -127,7 +124,7 @@ export class DiscordEventHandler {
                                         let userIntent = discordBot.getBridge().matrixAppservice.getIntentForUser(member.user.id);
                                         userIntent.leave(remoteRoom.matrix.roomId);
                                     });
-                                }).catch((err) => console.error(err));
+                                }).catch((err) => this.discordBot.getBridge().logger.error(err));
                             });
                         } else {
                             message.reply("This room is not custom bridged!");
@@ -152,7 +149,8 @@ export class DiscordEventHandler {
 
                         let part2 = (message.channel as Discord.TextChannel).name + ";" + (message.channel.id.substr(message.channel.id.length - 4));
 
-                        console.log("New bridged room: " + split[1]);
+                        this.discordBot.getBridge().logger.info("Custom bridged discord channel #" + (message.channel as Discord.TextChannel) + " to room: " + split[1]);
+
                         message.channel.send("**This room is now** ***custom*** **bridged to:** *" + split[1] + "*");
 
                         let matrixRoom = new MatrixRoom(split[1]);
@@ -171,13 +169,13 @@ export class DiscordEventHandler {
                                         };
                                         discordBot.setupNewUser(member, discordBot.getBridge().matrixAppservice.matrixBridge.getIntent(), userIntent, remoteRoom);
                                     });
-                                }).catch((e) => console.error(e));
-                            }).catch((e) => console.error(e));
+                                }).catch((e) => this.discordBot.getBridge().logger.error(e));
+                            }).catch((e) => this.discordBot.getBridge().logger.error(e));
                         });
                     }
                 }
             }
-        }).catch((e) => { console.error(e); });
+        }).catch((e) => { this.discordBot.getBridge().logger.error(e); });
     }
 
     public onTypingStart(channel: Discord.Channel, user: Discord.User) {

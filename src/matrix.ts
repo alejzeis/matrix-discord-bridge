@@ -52,11 +52,12 @@ export class MatrixAppservice {
                 onUserQuery: this.onUserQuery.bind(this),
                 onAliasQuery: this.onAliasQuery.bind(this),
                 onAliasQueried: this.onAliasQueried.bind(this),
-                onEvent: this.onEvent.bind(this)
+                onEvent: this.onEvent.bind(this),
+                onLog: this.onLog.bind(this)
             }
         });
 
-        console.log("Matrix AppService running on port %s", port);
+        this.bridge.logger.info("Matrix AppService running on port " + port);
         this.matrixBridge.run(port, cfg);
     }
 
@@ -108,7 +109,7 @@ export class MatrixAppservice {
 
     private onAliasQueried(alias, roomId) {
         let discordRoom = alias.split(":")[0].split("_")[1].replace("#!", "").replace("#", "");
-        console.log("Alias queried " + alias + ", discord room: " + discordRoom);
+        this.bridge.logger.debug("Alias queried " + alias + ", discord room: " + discordRoom);
 
         let intent = this.matrixBridge.getIntent();
         let roomStore = this.matrixBridge.getRoomStore();
@@ -134,7 +135,7 @@ export class MatrixAppservice {
 
     private onAliasQuery(alias, aliasLocalpart): Promise<object> {
         let discordRoom = aliasLocalpart.split("_")[1].replace("#", "");
-        console.log("Processing alias for " + alias + " (" + aliasLocalpart + ")" + ", discord room is: " + discordRoom);
+        this.bridge.logger.debug("Processing alias for " + alias + " (" + aliasLocalpart + ")" + ", discord room is: " + discordRoom);
 
         let intent = this.matrixBridge.getIntent();
         let roomStore = this.matrixBridge.getRoomStore();
@@ -142,7 +143,10 @@ export class MatrixAppservice {
         return new Promise((resolve, reject) => {
             roomStore.getEntriesByRemoteId(discordRoom).then((values) => {
                 if(values == null || values.length == 0) {
-                    console.error("Failed to find discordRoom matching: " + discordRoom);
+                    this.bridge.logger.warn("In alias Query: failed to find a Discord Room.", {
+                        alias: alias,
+                        discordRoom: discordRoom
+                    });
                     reject();
                     return;
                 }
@@ -172,7 +176,7 @@ export class MatrixAppservice {
 
     private onEvent(request, context) {
         let event = request.getData();
-        console.log(event.type);
+        this.bridge.logger.debug("Recieved " + event.type + " matrix event.");
 
         switch(event.type) {
             case "m.room.member":
@@ -187,6 +191,14 @@ export class MatrixAppservice {
 
                 this.eventHandler.onRoomMessageEvent(request, context);
                 break;
+        }
+    }
+
+    private onLog(line, isError) {
+        if(isError) {
+            this.bridge.logger.error(line);
+        } else {
+            this.bridge.logger.debug(line);
         }
     }
 }

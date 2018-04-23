@@ -55,7 +55,8 @@ export class MatrixEventHandler {
                                     let doUpdate = false;
 
                                     if(user == null) {
-                                        console.log("Inserting new Matrix User");
+                                        this.matrix.getBridge().logger.info("Inserting new Matrix User into database: " + event.state_key);
+
                                         let matrixUser = new MatrixUser(event.state_key);
                                         matrixUser.set("webhooks", {});
                                         matrixUser.set("webhookUser", true);
@@ -141,7 +142,8 @@ export class MatrixEventHandler {
                 userStore.getMatrixUser(event.sender).then((user) => {
                     if(user == null) {
                         appServiceBot.getJoinedMembers(event.room_id).then((members) => {
-                            console.log("Inserting new Matrix User");
+                            this.matrix.getBridge().logger.info("Inserting new Matrix User into database: " + event.sender);
+
                             let matrixUser = new MatrixUser(event.sender);
                             matrixUser.set("webhooks", {});
                             matrixUser.set("webhookUser", true);
@@ -162,24 +164,20 @@ export class MatrixEventHandler {
 
     private handleMissingChannelMapping(entry, channelId, channelName) {
         // Delete the old webhooks for this channel from the database
+
+        this.matrix.getBridge().logger.info("Processing missing channel mapping (channel deletion): " + channelId + " #" + channelName);
+
         this.matrix.matrixBridge.getUserStore().getByMatrixData({
             webhookUser: true
         }).then((users: Array<any>) => {
             users.forEach((user) => {
                 let userWebhooks = user.get("webhooks");
-                console.log("Found user: " + user.getDisplayName());
 
                 if(userWebhooks && Object.keys(userWebhooks).length > 0) { // Check if webhooks dictionary is empty or not
-                    console.log("Not empty")
                     if(userWebhooks[channelId]) { // check if there is a webhook for the to-be-deleted channel
-                        console.log("Found webhook");
                         delete userWebhooks[channelId]; // Remove that webhook entry for that channel
 
-                        console.log("Deleted");
-
-                        this.matrix.matrixBridge.getUserStore().setMatrixUser(user).then(() => {
-                            console.log("deleted");
-                        });
+                        this.matrix.matrixBridge.getUserStore().setMatrixUser(user);
                     }
                 }
             });
