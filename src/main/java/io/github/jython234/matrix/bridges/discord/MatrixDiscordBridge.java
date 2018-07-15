@@ -41,6 +41,7 @@ public class MatrixDiscordBridge extends MatrixBridge {
     protected DatabaseManagement databaseManagement;
     protected BridgingConnector connector;
     protected MessageHandler messageHandler;
+    protected CommandHandler commandHandler;
 
     protected JDA jda;
 
@@ -53,6 +54,7 @@ public class MatrixDiscordBridge extends MatrixBridge {
         this.databaseManagement = new DatabaseManagement(this);
         this.connector = new BridgingConnector(this);
         this.messageHandler = new MessageHandler(this);
+        this.commandHandler = new CommandHandler(this);
 
         if(!tmpDir.exists()) {
             tmpDir.mkdirs();
@@ -177,5 +179,9 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     public File getTmpDir() {
         return this.tmpDir;
+    }
+
+    public DiscordBridgeConfig getDiscordConfig() {
+        return this.discordConfig;
     }
 }

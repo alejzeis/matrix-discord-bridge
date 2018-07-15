@@ -1,2 +1,3 @@
 discord:
   token: "Insert Token Here"
+  clientId: "Insert ClientId here"

@@ -30,8 +30,9 @@ public class DiscordBridgeConfigLoader {
         }
 
         config.discord.token = (String) discord.get("token");
+        config.discord.clientId = (String) discord.get("clientId");
 
-        if(config.discord.token == null) {
+        if(config.discord.token == null || config.discord.clientId == null) {
             throw new KeyNotFoundException("Failed to find all required keys in \"discord\" section!");
         }
 

@@ -18,8 +18,17 @@ public class DiscordBridgeConfig {
          */
         String token;
 
+        /**
+         * Discord bot username.
+         */
+        String clientId;
+
         public String getToken() {
             return token;
+        }
+
+        public String getClientId() {
+            return clientId;
         }
     }
 

@@ -50,11 +50,11 @@ class MessageHandler {
 
         var mxcURL = this.bridge.getClientManager().uploadMatrixFromFile(downloadedFile.getPath()); // Upload to Matrix
 
-        MessageContent returnContent = null;
-        if(attachment.isImage()) {
+        MessageContent returnContent;
+        if(attachment.isImage() && mimetype.startsWith("image")) {
             var content = new MessageContent.ImageMessageContent();
             content.info = new MessageContent.ImageMessageContent.Info();
-            content.body = body;
+            content.body = attachment.getFileName();
 
             content.info.mimetype = mimetype;
             content.info.width = attachment.getWidth();
@@ -65,12 +65,11 @@ class MessageHandler {
             
             returnContent = content;
         } else {
-            // TODO: audio, video
-
+            // It's either audio, video, or a file
             if(mimetype.startsWith("audio")) {
                 var content = new MessageContent.AudioMessageContent();
                 content.info = new MessageContent.AudioMessageContent.Info();
-                content.body = body;
+                content.body = attachment.getFileName();
                 content.url = mxcURL;
 
                 try {
@@ -84,11 +83,21 @@ class MessageHandler {
                 
                 returnContent = content;
             } else if(mimetype.startsWith("video")) {
-                //TODO
+                var content = new MessageContent.VideoMessageContent();
+                content.info = new MessageContent.VideoMessageContent.Info();
+                content.body = attachment.getFileName();
+                content.url = mxcURL;
+
+                content.info.width = attachment.getWidth();
+                content.info.height = attachment.getHeight();
+                content.info.size = attachment.getSize();
+                content.info.mimetype = mimetype;
+
+                returnContent = content;
             } else {
                 var content = new MessageContent.FileMessageContent();
                 content.info = new MessageContent.FileMessageContent.Info();
-                content.body = body;
+                content.body = attachment.getFileName();
 
                 content.info.mimetype = mimetype;
                 content.info.size = attachment.getSize();
@@ -114,6 +123,9 @@ class MessageHandler {
         if(event.getMessage().getAttachments().size() > 0) {
             event.getMessage().getAttachments().forEach((attachment) -> {
                 try {
+                    if(!event.getMessage().getContentDisplay().equals("")) {
+                        client.sendMessage(room.getMatrixId(), getContentMarkdownToHtml(event.getMessage()));
+                    }
                     client.sendMessage(room.getMatrixId(), getContentForDiscordAttachment(event.getMessage().getContentDisplay(), attachment));
                 } catch (MatrixNetworkException | IOException e) {
                     this.bridge.getLogger().error("Failed to send attachment message!");
