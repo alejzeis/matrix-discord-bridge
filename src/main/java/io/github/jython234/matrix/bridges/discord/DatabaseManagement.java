@@ -40,6 +40,7 @@ class DatabaseManagement {
 
                 room.updateDataField("guild", channel.getGuild().getId());
                 room.updateDataField("channel", channel.getId());
+                room.updateDataField("manual", false);
             } else {
                 // The Room already exists in the database
                 room = bridge.getDatabase().getRoom(roomId);
@@ -84,7 +85,7 @@ class DatabaseManagement {
                     || !user.getAdditionalData().get("name").equals(member.getUser().getName())) {
 
                 user.updateDataField("name", member.getUser().getName());
-                client.setDisplayName(member.getUser().getName()); // Set the matrix display name
+                client.setDisplayName((member.getUser().isBot() ? "[BOT] " : "") + member.getUser().getName()); // Set the matrix display name
             }
 
             if((user.getAdditionalData().get("avatar") == null

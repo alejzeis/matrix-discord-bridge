@@ -56,6 +56,7 @@ class BridgingConnector {
         var discordChannel = this.bridge.jda.getTextChannelById((String) room.getAdditionalData().get("channel"));
 
         room.updateMatrixId(id); // Make sure the Matrix ID of the room is stored in the database.
+        room.updateDataField("manual", false); // This is not a manually bridged room, it's automatic
 
         discordChannel.getMembers().forEach((member) -> {
             var userId = this.bridge.getUserIdForDiscordUser(member.getUser());

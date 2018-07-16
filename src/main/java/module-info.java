@@ -1,7 +1,13 @@
-module io.github.jython234.matrix.bridges.discord {
+/**
+ * A rough implementation of Discord <-> Matrix bridge in Java
+ */
+module matrixjava.bridges.discord {
     requires java.base;
     requires java.desktop;
     requires jdk.incubator.httpclient;
+
+    requires matrixjava.appservice;
+    requires matrixjava.bridge;
 
     requires snakeyaml;
 
@@ -13,8 +19,5 @@ module io.github.jython234.matrix.bridges.discord {
 
     requires commons.io;
 
-    requires io.github.jython234.matrix.appservice;
-    requires io.github.jython234.matrix.bridge;
-
-    opens io.github.jython234.matrix.bridges.discord to io.github.jython234.matrix.bridge;
+    opens io.github.jython234.matrix.bridges.discord to matrixjava.bridge;
 }

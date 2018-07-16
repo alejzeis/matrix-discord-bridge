@@ -114,7 +114,7 @@ class MessageHandler {
     }
 
     void bridgeDiscordToMatrix(GuildMessageReceivedEvent event) throws IOException, MatrixNetworkException {
-        this.bridge.getLogger().info("Discord message by, " + event.getAuthor().getName() + ", in " + event.getChannel().getName() + " : " + event.getMessage().getContentRaw());
+        //this.bridge.getLogger().info("Discord message by, " + event.getAuthor().getName() + ", in " + event.getChannel().getName() + " : " + event.getMessage().getContentRaw());
         var roomId = Util.getRoomIdForChannel(event.getChannel());
 
         var room = this.bridge.getDatabase().getRoom(roomId);

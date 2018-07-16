@@ -33,12 +33,11 @@ public class DiscordEventListener extends ListenerAdapter {
     @Override
     public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
         try {
-            if(event.getAuthor().getId().equals(this.bridge.getDiscordConfig().getDiscord().getClientId()))
-                return; // We don't want echo from our own bot
+            /*if(event.getAuthor().getId().equals(this.bridge.getDiscordConfig().getDiscord().getClientId()))
+                return; // We don't want echo from our own bot*/
 
-            if(!this.bridge.commandHandler.processCommand(event)) { // First try to process the message as a Bot command
-                this.bridge.messageHandler.bridgeDiscordToMatrix(event); // It's not a command, so lets bridge it to Matrix
-            }
+            this.bridge.commandHandler.processCommand(event); // First try to process the message as a Bot command
+            this.bridge.messageHandler.bridgeDiscordToMatrix(event); // Send the message to Matrix
         } catch (IOException e) {
             this.bridge.getLogger().error("Error while processing message from Discord");
             this.bridge.getLogger().error("IOException: " + e.getMessage());
