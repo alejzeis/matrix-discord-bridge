@@ -2,6 +2,7 @@ package io.github.jython234.matrix.bridges.discord;
 
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import net.dv8tion.jda.core.MessageBuilder;
+import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.TextChannel;
@@ -48,6 +49,19 @@ class CommandHandler {
         } else if(content.startsWith("$ping")) {
             this.replyToMember(event.getChannel(), event.getMember(), "My ping is " + event.getJDA().getPing() + "ms");
             return true;
+        } else if(content.startsWith("$bridge")) {
+            // This person wants to custom bridge a room.
+            try {
+                this.handleBridgeCommand(event.getChannel(), event.getMessage(), event.getMember());
+            } catch (IOException | MatrixNetworkException e) {
+                this.replyToMember(event.getChannel(), event.getMember(), "There was an error while processing that command!");
+
+                this.bridge.getLogger().warn("Error while processing bridge command.");
+                this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                return true;
+            }
         } else {
             return false;
         }
@@ -61,6 +75,11 @@ class CommandHandler {
         }
         var userId = split[1];
 
+        if(!member.hasPermission(Permission.CREATE_INSTANT_INVITE)) {
+            this.replyToMember(channel, member, "You don't have permissions to invite someone, you need to have the **CREATE_INSTANT_INVITE** permission.");
+            return;
+        }
+
         // Get the room
         var roomId = Util.getRoomIdForChannel(channel);
         var room = this.bridge.getDatabase().getRoom(roomId);
@@ -71,5 +90,54 @@ class CommandHandler {
 
         this.bridge.getClientManager().getBridgeClient().invite(room.getMatrixId(), userId);
         this.replyToMember(channel, member, "**Successfully invited** *" + userId +"* **to this room on Matrix.**");
+    }
+
+    private void handleBridgeCommand(TextChannel channel, Message message, Member member) throws IOException, MatrixNetworkException {
+        var split = message.getContentDisplay().trim().split("\\s+");
+        if(split.length != 2) { // Make sure it is correctly formatted
+            this.replyToMember(channel, member, "Correct usage: **$bridge [roomId** ***OR*** **roomAlias]**");
+            return;
+        }
+        var roomIdOrAlias = split[1];
+
+        if(!member.hasPermission(Permission.MANAGE_CHANNEL)) {
+            this.replyToMember(channel, member, "You don't have permissions to manually bridge, you need to have the **MANAGE_CHANNEL** permission.");
+            return;
+        }
+
+        // Get the actual matrix ID
+        String matrixId;
+        if(roomIdOrAlias.startsWith("!")) {
+            matrixId = roomIdOrAlias; // Matrix room IDs start with !
+        } else {
+            // It's probably an alias
+            var response = this.bridge.getClientManager().getBridgeClient().getRoomIdFromAlias(roomIdOrAlias);
+            if(!response.successful) {
+                this.replyToMember(channel, member, "That room alias doesn't exist!");
+                return;
+            } else {
+                matrixId = response.result.roomId;
+            }
+        }
+
+        // Get the room
+        var roomId = Util.getRoomIdForChannel(channel);
+        var room = this.bridge.getDatabase().getRoom(roomId);
+        if(room == null) {
+            this.replyToMember(channel, member, "I couldn't find this channel in my database, something is wrong!");
+            return;
+        } else if(!room.getMatrixId().equals("")) {
+            this.replyToMember(channel, member, "This channel is already bridged!");
+            return;
+        }
+
+        // First try to join the room
+        if(!this.bridge.getClientManager().getBridgeClient().joinRoom(roomIdOrAlias).successful) {
+            this.replyToMember(channel, member, "I couldn't join that matrix room, maybe it doesn't exist or I'm not invited?");
+            return;
+        }
+
+        // We are in the room, now we need to add all the users and update the database
+        this.bridge.connector.handleNewMatrixRoomCreated(roomId, roomIdOrAlias, matrixId, true);
     }
 }

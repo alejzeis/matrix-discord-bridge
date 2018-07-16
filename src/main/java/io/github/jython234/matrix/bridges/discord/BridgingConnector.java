@@ -51,12 +51,12 @@ class BridgingConnector {
      * @param alias The full room alias.
      * @param id The matrix room ID.
      */
-    void handleNewMatrixRoomCreated(String dbId, String alias, String id) throws IOException{
+    void handleNewMatrixRoomCreated(String dbId, String alias, String id, boolean manual) throws IOException{
         var room = this.bridge.getDatabase().getRoom(dbId);
         var discordChannel = this.bridge.jda.getTextChannelById((String) room.getAdditionalData().get("channel"));
 
         room.updateMatrixId(id); // Make sure the Matrix ID of the room is stored in the database.
-        room.updateDataField("manual", false); // This is not a manually bridged room, it's automatic
+        room.updateDataField("manual", manual); // If the bridge is manually bridged or not
 
         discordChannel.getMembers().forEach((member) -> {
             var userId = this.bridge.getUserIdForDiscordUser(member.getUser());

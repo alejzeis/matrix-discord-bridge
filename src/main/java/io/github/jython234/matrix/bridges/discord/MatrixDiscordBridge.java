@@ -138,7 +138,7 @@ public class MatrixDiscordBridge extends MatrixBridge {
         this.logger.info("A bridged room, " + alias +", was created!");
 
         try {
-            this.connector.handleNewMatrixRoomCreated(roomId, alias, id);
+            this.connector.handleNewMatrixRoomCreated(roomId, alias, id, false);
         } catch (IOException e) {
             this.logger.error("Error while processing alias creation!");
             this.logger.error("IOException: " + e.getMessage());
