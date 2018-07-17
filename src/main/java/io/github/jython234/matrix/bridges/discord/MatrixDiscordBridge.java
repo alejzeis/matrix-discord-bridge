@@ -31,6 +31,9 @@ import java.net.URL;
  * @author jython234
  */
 public class MatrixDiscordBridge extends MatrixBridge {
+    public static final String SOFTWARE = "matrix-discord-bridge";
+    public static final String SOFTWARE_VERSION = "2.0.0-SNAPSHOT";
+
     public static final String USER_PREFIX ="!discord_";
     public static final String ROOM_PREFIX = "!discord_";
 
@@ -148,6 +151,10 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     @MatrixEventHandler
     public void _onMessageEvent(MessageMatrixEvent event) {
+        if(event.sender.startsWith("@!discord_")) {
+            return; // We don't want message echo from our own bots
+        }
+
         this.logger.info("Matrix message from " + event.sender + ", : " + event.content.body);
     }
 

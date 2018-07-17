@@ -2,7 +2,9 @@ package io.github.jython234.matrix.bridges.discord;
 
 import io.github.jython234.matrix.appservice.Util;
 import io.github.jython234.matrix.appservice.network.CreateRoomRequest;
+import io.github.jython234.matrix.bridge.db.Room;
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
+import net.dv8tion.jda.core.entities.TextChannel;
 
 import java.io.IOException;
 
@@ -74,5 +76,31 @@ class BridgingConnector {
 
         // Done! Display a message now saying the channel is bridged
         discordChannel.sendMessage("**This room is now bridged to** ***" + alias + "***").submit();
+    }
+
+    void handleUnbridgeRoom(TextChannel channel, Room room, boolean kickAll) throws IOException, MatrixNetworkException {
+        this.bridge.getClientManager().getBridgeClient().sendSimpleMessage(room.getMatrixId(), "Received request to unbridge room, unbridging room.");
+
+        channel.getMembers().forEach((member) -> {
+            var userId = this.bridge.getUserIdForDiscordUser(member.getUser());
+            var client = this.bridge.getClientManager().getClientForUser(userId);
+
+            try {
+                client.leaveRoom(room.getMatrixId());
+            } catch (MatrixNetworkException e) {
+                this.bridge.getLogger().warn("Error while handling new matrix room creation!");
+                this.bridge.getLogger().error("MatrixNetworkException: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+
+        if(kickAll) {
+            // TODO
+        }
+
+        this.bridge.getClientManager().getBridgeClient().leaveRoom(room.getMatrixId());
+
+        room.updateMatrixId("");
+        room.updateDataField("manual", false);
     }
 }

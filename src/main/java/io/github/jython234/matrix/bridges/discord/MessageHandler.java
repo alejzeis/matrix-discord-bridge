@@ -36,7 +36,7 @@ class MessageHandler {
         var content = new MessageContent.FormattedTextMessageContent();
         content.body = message.getContentDisplay();
         content.format = MessageContent.FormattedTextMessageContent.FORMAT_TYPE_HTML;
-        content.formattedBody = text;
+        content.formattedBody = text.replaceAll("\n", "<br>");
         return content;
     }
 

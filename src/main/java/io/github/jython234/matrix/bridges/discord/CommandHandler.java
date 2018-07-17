@@ -47,7 +47,16 @@ class CommandHandler {
                 return true;
             }
         } else if(content.startsWith("$ping")) {
-            this.replyToMember(event.getChannel(), event.getMember(), "My ping is " + event.getJDA().getPing() + "ms");
+            this.replyToMember(event.getChannel(), event.getMember(), "PONG! My ping is " + event.getJDA().getPing() + "ms!");
+            return true;
+        } else if(content.startsWith("$info")) {
+            this.replyToMember(event.getChannel(), event.getMember(), "I'm running " + MatrixDiscordBridge.SOFTWARE + " v" + MatrixDiscordBridge.SOFTWARE_VERSION
+                    + "\nSystem:       " + System.getProperty("os.name") + " " + System.getProperty("os.version") + " " + System.getProperty("os.arch")
+                    + "\nJRE:          " + System.getProperty("java.version") + " by " + System.getProperty("java.vendor")
+                    + "\nRAM Free:     " + (Runtime.getRuntime().freeMemory() / 1048576) + "MB out of " + (Runtime.getRuntime().totalMemory() / 1048576) + "MB"
+                    + "\nMax RAM:      " + (Runtime.getRuntime().maxMemory() / 1048576) + "MB"
+                    + "\nDiscord Ping: " + event.getJDA().getPing() + "ms"
+                );
             return true;
         } else if(content.startsWith("$bridge")) {
             // This person wants to custom bridge a room.
@@ -57,6 +66,18 @@ class CommandHandler {
                 this.replyToMember(event.getChannel(), event.getMember(), "There was an error while processing that command!");
 
                 this.bridge.getLogger().warn("Error while processing bridge command.");
+                this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                return true;
+            }
+        } else if(content.startsWith("$unbridge")) {
+            try {
+                this.handleUnbridgeCommand(event.getChannel(), event.getMessage(), event.getMember());
+            } catch (IOException | MatrixNetworkException e) {
+                this.replyToMember(event.getChannel(), event.getMember(), "There was an error while processing that command!");
+
+                this.bridge.getLogger().warn("Error while processing unbridge command.");
                 this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace();
             } finally {
@@ -139,5 +160,33 @@ class CommandHandler {
 
         // We are in the room, now we need to add all the users and update the database
         this.bridge.connector.handleNewMatrixRoomCreated(roomId, roomIdOrAlias, matrixId, true);
+    }
+
+    private void handleUnbridgeCommand(TextChannel channel, Message message, Member member) throws IOException, MatrixNetworkException {
+        if(!member.hasPermission(Permission.MANAGE_CHANNEL)) {
+            this.replyToMember(channel, member, "You don't have permissions to manually unbridge, you need to have the **MANAGE_CHANNEL** permission.");
+            return;
+        }
+
+        // Get the room
+        var roomId = Util.getRoomIdForChannel(channel);
+        var room = this.bridge.getDatabase().getRoom(roomId);
+        if(room == null) {
+            this.replyToMember(channel, member, "I couldn't find this channel in my database, something is wrong!");
+            return;
+        } else if(room.getMatrixId() == null || room.getMatrixId().equals("")) {
+            this.replyToMember(channel, member, "This channel isn't bridged!");
+            return;
+        }
+
+        if((Boolean) room.getAdditionalData().get("manual")) {
+            // This is a manual bridge, so we just want to have all the bot users leave and finally the appservice bot
+            this.bridge.connector.handleUnbridgeRoom(channel, room, false);
+        } else {
+            // Kick everyone and then leave
+            this.bridge.connector.handleUnbridgeRoom(channel, room, true);
+        }
+
+        this.replyToMember(channel, member, "**Room unbridged.**");
     }
 }
