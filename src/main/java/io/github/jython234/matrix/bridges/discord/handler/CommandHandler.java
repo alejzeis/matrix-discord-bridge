@@ -1,6 +1,8 @@
-package io.github.jython234.matrix.bridges.discord;
+package io.github.jython234.matrix.bridges.discord.handler;
 
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
+import io.github.jython234.matrix.bridges.discord.MatrixDiscordBridge;
+import io.github.jython234.matrix.bridges.discord.Util;
 import net.dv8tion.jda.core.MessageBuilder;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Member;
@@ -15,10 +17,10 @@ import java.io.IOException;
  *
  * @author jython234
  */
-class CommandHandler {
+public class CommandHandler {
     private MatrixDiscordBridge bridge;
 
-    CommandHandler(MatrixDiscordBridge bridge) {
+    public CommandHandler(MatrixDiscordBridge bridge) {
         this.bridge = bridge;
     }
 
@@ -159,7 +161,7 @@ class CommandHandler {
         }
 
         // We are in the room, now we need to add all the users and update the database
-        this.bridge.connector.handleNewMatrixRoomCreated(roomId, roomIdOrAlias, matrixId, true);
+        this.bridge.getConnector().handleNewMatrixRoomCreated(roomId, roomIdOrAlias, matrixId, true);
     }
 
     private void handleUnbridgeCommand(TextChannel channel, Message message, Member member) throws IOException, MatrixNetworkException {
@@ -181,10 +183,10 @@ class CommandHandler {
 
         if((Boolean) room.getAdditionalData().get("manual")) {
             // This is a manual bridge, so we just want to have all the bot users leave and finally the appservice bot
-            this.bridge.connector.handleUnbridgeRoom(channel, room, false);
+            this.bridge.getConnector().handleUnbridgeRoom(channel, room, false);
         } else {
             // Kick everyone and then leave
-            this.bridge.connector.handleUnbridgeRoom(channel, room, true);
+            this.bridge.getConnector().handleUnbridgeRoom(channel, room, true);
         }
 
         this.replyToMember(channel, member, "**Room unbridged.**");

@@ -14,7 +14,7 @@ import java.io.IOException;
  *
  * @author jython234
  */
-class BridgingConnector {
+public class BridgingConnector {
     private MatrixDiscordBridge bridge;
 
     BridgingConnector(MatrixDiscordBridge bridge) {
@@ -29,7 +29,7 @@ class BridgingConnector {
      * @param alias The full Matrix room alias.
      * @param roomId The isolated room ID we use as the key in the database.
      */
-    CreateRoomRequest createNewMatrixRoom(String alias, String roomId) throws IOException {
+    public CreateRoomRequest createNewMatrixRoom(String alias, String roomId) throws IOException {
         var request = new CreateRoomRequest();
 
         var room = this.bridge.getDatabase().getRoom(roomId);
@@ -53,7 +53,7 @@ class BridgingConnector {
      * @param alias The full room alias.
      * @param id The matrix room ID.
      */
-    void handleNewMatrixRoomCreated(String dbId, String alias, String id, boolean manual) throws IOException{
+    public void handleNewMatrixRoomCreated(String dbId, String alias, String id, boolean manual) throws IOException{
         var room = this.bridge.getDatabase().getRoom(dbId);
         var discordChannel = this.bridge.jda.getTextChannelById((String) room.getAdditionalData().get("channel"));
 
@@ -78,7 +78,7 @@ class BridgingConnector {
         discordChannel.sendMessage("**This room is now bridged to** ***" + alias + "***").submit();
     }
 
-    void handleUnbridgeRoom(TextChannel channel, Room room, boolean kickAll) throws IOException, MatrixNetworkException {
+    public void handleUnbridgeRoom(TextChannel channel, Room room, boolean kickAll) throws IOException, MatrixNetworkException {
         this.bridge.getClientManager().getBridgeClient().sendSimpleMessage(room.getMatrixId(), "Received request to unbridge room, unbridging room.");
 
         channel.getMembers().forEach((member) -> {

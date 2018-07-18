@@ -10,6 +10,10 @@ import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import io.github.jython234.matrix.bridge.network.MatrixUserClient;
 import io.github.jython234.matrix.bridges.discord.config.DiscordBridgeConfig;
 import io.github.jython234.matrix.bridges.discord.config.DiscordBridgeConfigLoader;
+import io.github.jython234.matrix.bridges.discord.handler.CommandHandler;
+import io.github.jython234.matrix.bridges.discord.handler.MessageEventsHandler;
+import io.github.jython234.matrix.bridges.discord.handler.PresenceHandler;
+import io.github.jython234.matrix.bridges.discord.handler.UserEventsHandler;
 import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.JDABuilder;
@@ -43,8 +47,11 @@ public class MatrixDiscordBridge extends MatrixBridge {
     protected Logger logger;
     protected DatabaseManagement databaseManagement;
     protected BridgingConnector connector;
-    protected MessageHandler messageHandler;
-    protected CommandHandler commandHandler;
+
+    private CommandHandler commandHandler;
+    private PresenceHandler presenceHandler;
+    private MessageEventsHandler messageEventsHandler;
+    private UserEventsHandler userEventsHandler;
 
     protected JDA jda;
 
@@ -54,10 +61,14 @@ public class MatrixDiscordBridge extends MatrixBridge {
     public MatrixDiscordBridge(String configDirectory) throws IOException, KeyNotFoundException {
         super(configDirectory);
         this.logger = LoggerFactory.getLogger("MatrixDiscordBridge");
+
         this.databaseManagement = new DatabaseManagement(this);
         this.connector = new BridgingConnector(this);
-        this.messageHandler = new MessageHandler(this);
+
         this.commandHandler = new CommandHandler(this);
+        this.presenceHandler = new PresenceHandler(this);
+        this.messageEventsHandler = new MessageEventsHandler(this);
+        this.userEventsHandler = new UserEventsHandler(this);
 
         if(!tmpDir.exists()) {
             tmpDir.mkdirs();
@@ -99,6 +110,8 @@ public class MatrixDiscordBridge extends MatrixBridge {
                     .setToken(this.discordConfig.getDiscord().getToken())
                     .addEventListener(new DiscordEventListener(this))
                     .buildBlocking();
+
+            this.presenceHandler.startUpdating();
         } catch (LoginException e) {
             this.logger.error("FAILED TO LOG IN TO DISCORD!");
             this.logger.error("LoginException: " + e.getMessage());
@@ -112,6 +125,7 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     @Override
     protected void onStop() {
+        this.presenceHandler.stopUpdating();
         this.jda.shutdown();
     }
 
@@ -190,5 +204,33 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     public DiscordBridgeConfig getDiscordConfig() {
         return this.discordConfig;
+    }
+
+    public JDA getJDA() {
+        return this.jda;
+    }
+
+    public BridgingConnector getConnector() {
+        return this.connector;
+    }
+
+    public DatabaseManagement getDbManagement() {
+        return this.databaseManagement;
+    }
+
+    public MessageEventsHandler getMessageEventsHandler() {
+        return this.messageEventsHandler;
+    }
+
+    public CommandHandler getCommandHandler() {
+        return this.commandHandler;
+    }
+
+    public PresenceHandler getPresenceHandler() {
+        return this.presenceHandler;
+    }
+
+    public UserEventsHandler getUserEventsHandler() {
+        return this.userEventsHandler;
     }
 }

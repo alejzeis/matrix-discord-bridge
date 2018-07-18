@@ -1,7 +1,9 @@
-package io.github.jython234.matrix.bridges.discord;
+package io.github.jython234.matrix.bridges.discord.handler;
 
 import io.github.jython234.matrix.appservice.event.room.message.MessageContent;
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
+import io.github.jython234.matrix.bridges.discord.MatrixDiscordBridge;
+import io.github.jython234.matrix.bridges.discord.Util;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import org.commonmark.node.Node;
@@ -18,12 +20,12 @@ import java.net.URLConnection;
  *
  * @author jython234
  */
-class MessageHandler {
+public class MessageEventsHandler {
     private MatrixDiscordBridge bridge;
     private Parser parser;
     private HtmlRenderer renderer;
 
-    MessageHandler(MatrixDiscordBridge bridge) {
+    public MessageEventsHandler(MatrixDiscordBridge bridge) {
         this.bridge = bridge;
         this.parser = Parser.builder().build();
         this.renderer = HtmlRenderer.builder().build();
@@ -36,7 +38,7 @@ class MessageHandler {
         var content = new MessageContent.FormattedTextMessageContent();
         content.body = message.getContentDisplay();
         content.format = MessageContent.FormattedTextMessageContent.FORMAT_TYPE_HTML;
-        content.formattedBody = text.replaceAll("\n", "<br>");
+        content.formattedBody = text.trim().replaceAll("\n", "<br>");
         return content;
     }
 
@@ -113,19 +115,24 @@ class MessageHandler {
         return returnContent;
     }
 
-    void bridgeDiscordToMatrix(GuildMessageReceivedEvent event) throws IOException, MatrixNetworkException {
+    public void bridgeDiscordToMatrix(GuildMessageReceivedEvent event) throws IOException, MatrixNetworkException {
         //this.bridge.getLogger().info("Discord message by, " + event.getAuthor().getName() + ", in " + event.getChannel().getName() + " : " + event.getMessage().getContentRaw());
         var roomId = Util.getRoomIdForChannel(event.getChannel());
 
         var room = this.bridge.getDatabase().getRoom(roomId);
         var client = this.bridge.getClientManager().getClientForUser(this.bridge.getUserIdForDiscordUser(event.getAuthor()));
 
+        client.setTyping(room.getMatrixId(), false); // We're sending a message finally so we aren't typing anymore if we were before
+
         if(event.getMessage().getAttachments().size() > 0) {
             event.getMessage().getAttachments().forEach((attachment) -> {
                 try {
+                    // Send the message caption if there is one
                     if(!event.getMessage().getContentDisplay().equals("")) {
                         client.sendMessage(room.getMatrixId(), getContentMarkdownToHtml(event.getMessage()));
                     }
+
+                    // Now send the actual attachment
                     client.sendMessage(room.getMatrixId(), getContentForDiscordAttachment(event.getMessage().getContentDisplay(), attachment));
                 } catch (MatrixNetworkException | IOException e) {
                     this.bridge.getLogger().error("Failed to send attachment message!");
@@ -134,6 +141,7 @@ class MessageHandler {
                 }
             });
         } else {
+            // No attachments or anything, just a plain old text message
             client.sendMessage(room.getMatrixId(), getContentMarkdownToHtml(event.getMessage()));
         }
     }

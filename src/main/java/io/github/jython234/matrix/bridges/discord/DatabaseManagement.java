@@ -3,6 +3,7 @@ package io.github.jython234.matrix.bridges.discord;
 import io.github.jython234.matrix.bridge.db.Room;
 import io.github.jython234.matrix.bridge.db.User;
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
+import io.github.jython234.matrix.bridge.network.MatrixUserClient;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.TextChannel;
@@ -15,7 +16,7 @@ import java.io.IOException;
  *
  * @author jython234
  */
-class DatabaseManagement {
+public class DatabaseManagement {
     private MatrixDiscordBridge bridge;
 
     DatabaseManagement(MatrixDiscordBridge bridge) {
@@ -84,16 +85,14 @@ class DatabaseManagement {
             if(user.getAdditionalData().get("name") == null
                     || !user.getAdditionalData().get("name").equals(member.getUser().getName())) {
 
-                user.updateDataField("name", member.getUser().getName());
-                client.setDisplayName((member.getUser().isBot() ? "[BOT] " : "") + member.getUser().getName()); // Set the matrix display name
+                this.updateUsernameFromDiscordUser(user, member.getUser(), client);
             }
 
             if((user.getAdditionalData().get("avatar") == null
                     || !user.getAdditionalData().get("avatar").equals(member.getUser().getAvatarId()))
                     && member.getUser().getAvatarId() != null) { // Make sure to check if the avatarId is null, that means they don't have a profile picture set
 
-                user.updateDataField("avatar", member.getUser().getAvatarId());
-                this.bridge.setMatrixAvatarFromDiscord(client, member.getUser()); // Set the avatar on matrix
+                this.updateAvatarFromDiscordUser(user, member.getUser(), client);
             }
         } catch (IOException e) {
             this.bridge.getLogger().warn("Failed to setup member in database for Discord user: " + member.getUser().getName());
@@ -104,5 +103,15 @@ class DatabaseManagement {
             this.bridge.getLogger().error("MatrixNetworkException: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    public void updateUsernameFromDiscordUser(User user, net.dv8tion.jda.core.entities.User discordUser, MatrixUserClient client) throws MatrixNetworkException {
+        user.updateDataField("name", discordUser.getName());
+        client.setDisplayName((discordUser.isBot() ? "[BOT] " : "") + discordUser.getName()); // Set the matrix display name
+    }
+
+    public void updateAvatarFromDiscordUser(User user, net.dv8tion.jda.core.entities.User discordUser, MatrixUserClient client) throws IOException {
+        user.updateDataField("avatar", discordUser.getAvatarId());
+        this.bridge.setMatrixAvatarFromDiscord(client, discordUser); // Set the avatar on matrix
     }
 }
