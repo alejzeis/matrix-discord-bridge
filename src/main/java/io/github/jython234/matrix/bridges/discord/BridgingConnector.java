@@ -5,6 +5,7 @@ import io.github.jython234.matrix.appservice.network.CreateRoomRequest;
 import io.github.jython234.matrix.bridge.db.Room;
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import net.dv8tion.jda.core.entities.TextChannel;
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 
@@ -79,7 +80,11 @@ public class BridgingConnector {
     }
 
     public void handleUnbridgeRoom(TextChannel channel, Room room, boolean kickAll) throws IOException, MatrixNetworkException {
-        this.bridge.getClientManager().getBridgeClient().sendSimpleMessage(room.getMatrixId(), "Received request to unbridge room, unbridging room.");
+        this.handleUnbridgeRoom(channel, room, kickAll, "Received request to unbridge room, unbridging room.");
+    }
+
+    public void handleUnbridgeRoom(TextChannel channel, Room room, boolean kickAll, String message) throws IOException, MatrixNetworkException {
+        this.bridge.getClientManager().getBridgeClient().sendSimpleMessage(room.getMatrixId(), message);
 
         channel.getMembers().forEach((member) -> {
             var userId = this.bridge.getUserIdForDiscordUser(member.getUser());
@@ -95,9 +100,29 @@ public class BridgingConnector {
         });
 
         if(kickAll) {
-            // TODO
+            var result = this.bridge.getClientManager().getBridgeClient().getRoomMembers(room.getMatrixId());
+            // Get a list of room members
+            if(result.successful) {
+                result.result.members.forEach((key, value) -> {
+                    // We don't want to kick ourselves!
+                    if(key.startsWith("@" + this.bridge.getAppservice().getRegistration().getSenderLocalpart())) return;
+
+                    // Key contains the User ID
+                    try {
+                        this.bridge.getClientManager().getBridgeClient().kick(room.getMatrixId(), key, "This room is being unbridged!");
+                    } catch (MatrixNetworkException e) {
+                        this.bridge.getLogger().warn("Failed to kick user " + key + " during unbridging of room " + room.getMatrixId());
+                        this.bridge.getLogger().error("MatrixNetworkException: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                });
+            } else {
+                this.bridge.getLogger().error("Failed to get list of room members for room " + room.getMatrixId());
+                this.bridge.getLogger().error("Not kicking users in room.");
+            }
         }
 
+        // Leave the room once our work is done.
         this.bridge.getClientManager().getBridgeClient().leaveRoom(room.getMatrixId());
 
         room.updateMatrixId("");

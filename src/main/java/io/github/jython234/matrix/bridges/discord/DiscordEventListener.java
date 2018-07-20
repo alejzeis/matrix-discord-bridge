@@ -4,6 +4,8 @@ import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Game;
 import net.dv8tion.jda.core.events.ReadyEvent;
+import net.dv8tion.jda.core.events.channel.text.TextChannelCreateEvent;
+import net.dv8tion.jda.core.events.channel.text.TextChannelDeleteEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.events.user.UserTypingEvent;
 import net.dv8tion.jda.core.events.user.update.UserUpdateAvatarEvent;
@@ -36,6 +38,8 @@ public class DiscordEventListener extends ListenerAdapter {
         })));
     }
 
+    // Messages ------------------------------------------------------
+
     @Override
     public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
         try {
@@ -50,6 +54,8 @@ public class DiscordEventListener extends ListenerAdapter {
             e.printStackTrace();
         }
     }
+
+    // User ----------------------------------------------------------
 
     @Override
     public void onUserTyping(UserTypingEvent event) {
@@ -108,6 +114,37 @@ public class DiscordEventListener extends ListenerAdapter {
         } catch (MatrixNetworkException e) {
             this.bridge.getLogger().error("Error while processing UserUpdateOnlineStatus event from Discord");
             this.bridge.getLogger().error("MatrixNetworkException: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Channels -------------------------------------------------------------------------------
+
+
+    @Override
+    public void onTextChannelCreate(TextChannelCreateEvent event) {
+        this.bridge.getLogger().info("New channel #" + event.getChannel().getName() + " (" + event.getGuild().getName() + ") created, updating database....");
+
+        if(event.getGuild().getSelfMember().hasPermission(event.getChannel(), Permission.MESSAGE_READ)) { // Check if we have access to the channel
+            this.bridge.getDbManagement().processUserSyncForChannel(event.getChannel());
+            this.bridge.getLogger().info("Done.");
+
+            event.getChannel().sendMessage("**You can join this room on Matrix at** ***#!discord_" + Util.getRoomIdForChannel(event.getChannel()) + ":" + this.bridge.getConfig().getMatrixDomain() + "***").submit();
+        } else {
+            this.bridge.getLogger().info("No MESSAGE_READ permission in room, excluding from database.");
+        }
+    }
+
+    @Override
+    public void onTextChannelDelete(TextChannelDeleteEvent event) {
+        this.bridge.getLogger().info("Channel #" + event.getChannel().getName() + " (" + event.getGuild().getName() + ") deleted, updating database...");
+
+        try {
+            this.bridge.getDbManagement().processChannelDeletion(event.getChannel());
+            this.bridge.getLogger().info("Done.");
+        } catch (IOException | MatrixNetworkException e) {
+            this.bridge.getLogger().error("Error while processing channel deletion event from Discord");
+            this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
         }
     }

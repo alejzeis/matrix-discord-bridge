@@ -36,7 +36,7 @@ public class PresenceHandler {
         this.thread.interrupt();
     }
 
-    public void updatePresencesLoop() {
+    private void updatePresencesLoop() {
         this.bridge.getLogger().info("Discord Presence Updating started.");
         while(this.running) {
             this.bridge.getJDA().getGuilds().forEach((guild) -> guild.getMembers().forEach((member) -> {

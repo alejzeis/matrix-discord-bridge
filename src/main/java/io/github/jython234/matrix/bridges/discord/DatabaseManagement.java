@@ -27,7 +27,7 @@ public class DatabaseManagement {
      * Processes a "sync" for a single text channel. It updates the database, adding
      * a new Room entry for the channel if it doesn't exist, and adding new User entries
      * if a channel member doesn't exist, or updating them if they do.
-     * @param channel
+     * @param channel The channel to sync for.
      */
     void processUserSyncForChannel(TextChannel channel) {
         var roomId = Util.getRoomIdForChannel(channel); // the ID of the room in the database, and also the matrix room alias
@@ -64,6 +64,23 @@ public class DatabaseManagement {
             this.bridge.getLogger().warn("Failed to process sync for Discord channel #" + channel.getName() + ", guild: " + channel.getGuild().getName());
             this.bridge.getLogger().error("IOException: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    void processChannelDeletion(TextChannel channel) throws IOException, MatrixNetworkException {
+        var roomId = Util.getRoomIdForChannel(channel);
+        var room = this.bridge.getDatabase().getRoom(roomId);
+
+        if(room != null) { // Check if it's in the database
+            if(!room.getMatrixId().equals("")) { // Check if it has been bridged and has a Matrix room.
+                // Kick the users in the room and such.
+                this.bridge.getConnector().handleUnbridgeRoom(channel, room, !((Boolean) room.getAdditionalData().get("manual")), "The Discord channel this room was bridged to has been deleted, unbridging room...");
+            }
+
+            // Now we can delete it from the database
+            this.bridge.getDatabase().deleteRoom(room);
+        } else {
+            this.bridge.getLogger().warn("Attempted to process channel deletion for #" + channel.getName() + " (" + channel.getGuild().getName() + "), but it is not in the database.");
         }
     }
 
