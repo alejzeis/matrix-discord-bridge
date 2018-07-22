@@ -8,6 +8,8 @@ import net.dv8tion.jda.core.events.channel.text.TextChannelCreateEvent;
 import net.dv8tion.jda.core.events.channel.text.TextChannelDeleteEvent;
 import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateNameEvent;
 import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateTopicEvent;
+import net.dv8tion.jda.core.events.emote.EmoteAddedEvent;
+import net.dv8tion.jda.core.events.emote.EmoteRemovedEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.events.user.UserTypingEvent;
 import net.dv8tion.jda.core.events.user.update.UserUpdateAvatarEvent;
@@ -43,6 +45,24 @@ public class DiscordEventListener extends ListenerAdapter {
 
         var end = System.currentTimeMillis();
         this.bridge.getLogger().info("Inital Sync complete in " + (end - start) + "ms.");
+
+        this.bridge.getEmojiManager().syncEmojis(event.getJDA());
+    }
+
+    @Override
+    public void onEmoteAdded(EmoteAddedEvent event) {
+        this.bridge.getEmojiManager().syncEmoji(event.getEmote());
+    }
+
+    @Override
+    public void onEmoteRemoved(EmoteRemovedEvent event) {
+        try {
+            this.bridge.getEmojiManager().deleteEmoji(event.getEmote());
+        } catch (IOException e) {
+            this.bridge.getLogger().error("Error while processing emote deletion event from Discord");
+            this.bridge.getLogger().error("IOException: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // Messages ------------------------------------------------------

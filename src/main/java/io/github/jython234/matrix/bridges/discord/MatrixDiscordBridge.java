@@ -50,6 +50,7 @@ public class MatrixDiscordBridge extends MatrixBridge {
     private PresenceHandler presenceHandler;
     private MessageEventsHandler messageEventsHandler;
     private UserEventsHandler userEventsHandler;
+    private EmojiManager emojiManager;
     private WebhookManager webhookManager;
 
     protected JDA jda;
@@ -69,6 +70,7 @@ public class MatrixDiscordBridge extends MatrixBridge {
         this.messageEventsHandler = new MessageEventsHandler(this);
         this.userEventsHandler = new UserEventsHandler(this);
 
+        this.emojiManager = new EmojiManager(this);
         this.webhookManager = new WebhookManager(this);
 
         if(!tmpDir.exists()) {
@@ -250,5 +252,9 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     public WebhookManager getWebhookManager() {
         return this.webhookManager;
+    }
+
+    public EmojiManager getEmojiManager() {
+        return this.emojiManager;
     }
 }

@@ -5,9 +5,7 @@ import io.github.jython234.matrix.appservice.event.room.message.MessageMatrixEve
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import io.github.jython234.matrix.bridges.discord.MatrixDiscordBridge;
 import io.github.jython234.matrix.bridges.discord.Util;
-import net.dv8tion.jda.core.entities.Icon;
-import net.dv8tion.jda.core.entities.Message;
-import net.dv8tion.jda.core.entities.Webhook;
+import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
@@ -34,19 +32,44 @@ public class MessageEventsHandler {
         this.renderer = HtmlRenderer.builder().build();
     }
 
-    private MessageContent getContentMarkdownToHtml(Message message) {
-        // TODO: Convert mentions
-        if(message.getContentDisplay().contains("*") || message.getContentDisplay().contains("_") || message.getContentDisplay().contains("~")) {
-            Node doc = this.parser.parse(message.getContentDisplay());
+    private MessageContent getContentMarkdownToHtml(Message message) throws IOException {
+        var inputText = message.getContentRaw();
+        var hasMentions = false;
+        var hasEmotes = false;
+
+        // First determine if the message has mentions or emotes
+
+        for(Member member : message.getMentionedMembers()) {
+            hasMentions = true;
+            inputText = inputText.replaceAll("<@!"+member.getUser().getId()+">", "@" + member.getEffectiveName());
+        }
+
+        for(Emote emote : message.getEmotes()) {
+            hasEmotes = true;
+            inputText = inputText.replaceAll("<:" + emote.getName() + ":" + emote.getId() + ">", ":" + emote.getName() + ":");
+        }
+
+        if(hasMentions || hasEmotes || message.getContentDisplay().contains("*") || message.getContentDisplay().contains("_") || message.getContentDisplay().contains("~")) {
+            Node doc = this.parser.parse(inputText);
             var text = this.renderer.render(doc);
 
             var content = new MessageContent.FormattedTextMessageContent();
-            content.body = message.getContentDisplay();
+            content.body = inputText;
             content.format = MessageContent.FormattedTextMessageContent.FORMAT_TYPE_HTML;
             content.formattedBody = text.trim().replaceAll("\n", "<br>");
+
+            for(Member member : message.getMentionedMembers()) {
+                var userId = "@!discord_" + member.getUser().getId() + ":" + this.bridge.getConfig().getMatrixDomain();
+                content.formattedBody = content.formattedBody.replaceAll("@"+member.getEffectiveName(), "<a href=\"https://matrix.to/#/" + userId + "\">" + member.getEffectiveName() + "</a>");
+            }
+
+            for(Emote emote : message.getEmotes()) {
+                var mxcEmojiUrl = this.bridge.getEmojiManager().getMXCEmoji(emote);
+                content.formattedBody = content.formattedBody.replaceAll(":" + emote.getName() + ":", "<img src=\"" + mxcEmojiUrl + "\" alt=\":" + emote.getName() + ":\"/>");
+            }
             return content;
         } else {
-            // There aren't any markdown characters, so we can send a plain message
+            // There aren't any markdown characters, emotes, or mentions so we can send a plain message
             var content = new MessageContent.TextMessageContent();
 
             content.body = message.getContentDisplay();
@@ -217,7 +240,7 @@ public class MessageEventsHandler {
     }
 
     public void bridgeMatrixToDiscord(MessageMatrixEvent event) throws IOException {
-        this.bridge.getLogger().info("Matrix message from " + event.sender + ", : " + event.content.body);
+        //this.bridge.getLogger().info("Matrix message from " + event.sender + ", : " + event.content.body);
 
         var room = this.bridge.getDatabase().getRoomByMatrixId(event.roomId);
         var channelId = (String) room.getAdditionalData().get("channel");
