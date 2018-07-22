@@ -152,6 +152,12 @@ public class MessageEventsHandler {
 
     private void sendMatrixMessageViaWebhook(MessageMatrixEvent event, Webhook webhook) throws MatrixNetworkException {
         var client = webhook.newClient().build();
+
+        // Replace any custom emotes in the message
+        for(var emote : webhook.getChannel().getGuild().getEmotes()) {
+            event.content.body = event.content.body.replaceAll(":" + emote.getName() + ":", "<:" + emote.getName() + ":" + emote.getId() + ">");
+        }
+
         if(event.content instanceof MessageContent.TextMessageContent || event.content instanceof MessageContent.NoticeMessageContent) {
             client.send(event.content.body);
         } else if(event.content instanceof MessageContent.EmoteMessageContent) {
