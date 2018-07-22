@@ -6,6 +6,8 @@ import net.dv8tion.jda.core.entities.Game;
 import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.channel.text.TextChannelCreateEvent;
 import net.dv8tion.jda.core.events.channel.text.TextChannelDeleteEvent;
+import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateNameEvent;
+import net.dv8tion.jda.core.events.channel.text.update.TextChannelUpdateTopicEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.events.user.UserTypingEvent;
 import net.dv8tion.jda.core.events.user.update.UserUpdateAvatarEvent;
@@ -26,7 +28,9 @@ public class DiscordEventListener extends ListenerAdapter {
     @Override
     public void onReady(ReadyEvent event) {
         this.bridge.getLogger().info("Discord connection ready!");
-        this.bridge.getLogger().info("Processing inital sync for all channels and members...");
+        this.bridge.getLogger().info("Processing inital sync for all channels and members... (this may take a while!)");
+
+        var start = System.currentTimeMillis();
 
         event.getJDA().getPresence().setPresence(Game.playing("Matrix <-> Discord Bridge"), false);
 
@@ -36,6 +40,9 @@ public class DiscordEventListener extends ListenerAdapter {
                 this.bridge.databaseManagement.processUserSyncForChannel(textChannel);
             }
         })));
+
+        var end = System.currentTimeMillis();
+        this.bridge.getLogger().info("Inital Sync complete in " + (end - start) + "ms.");
     }
 
     // Messages ------------------------------------------------------
@@ -46,8 +53,8 @@ public class DiscordEventListener extends ListenerAdapter {
             /*if(event.getAuthor().getId().equals(this.bridge.getDiscordConfig().getDiscord().getClientId()))
                 return; // We don't want echo from our own bot*/
 
-            this.bridge.getCommandHandler().processCommand(event); // First try to process the message as a Bot command
             this.bridge.getMessageEventsHandler().bridgeDiscordToMatrix(event); // Send the message to Matrix
+            this.bridge.getCommandHandler().processCommand(event); // try to process the message as a Bot command
         } catch (MatrixNetworkException | IOException e) {
             this.bridge.getLogger().error("Error while processing message event from Discord");
             this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
@@ -144,6 +151,32 @@ public class DiscordEventListener extends ListenerAdapter {
             this.bridge.getLogger().info("Done.");
         } catch (IOException | MatrixNetworkException e) {
             this.bridge.getLogger().error("Error while processing channel deletion event from Discord");
+            this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onTextChannelUpdateName(TextChannelUpdateNameEvent event) {
+        this.bridge.getLogger().info("Channel #" + event.getOldName() + "(" + event.getGuild().getName() + ") changed name to #" + event.getNewName() + ", updating database..,");
+
+        try {
+            this.bridge.getDbManagement().processChannelNameChange(event.getChannel(), event.getOldName());
+        } catch (IOException | MatrixNetworkException e) {
+            this.bridge.getLogger().error("Error while processing channel topic change event from Discord");
+            this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onTextChannelUpdateTopic(TextChannelUpdateTopicEvent event) {
+        this.bridge.getLogger().info("Channel #" + event.getChannel().getName() + "(" + event.getGuild().getName() + ") changed topic.");
+
+        try {
+            this.bridge.getConnector().handleRoomTopicChange(event.getChannel());
+        } catch (IOException | MatrixNetworkException e) {
+            this.bridge.getLogger().error("Error while processing channel topic change event from Discord");
             this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
         }

@@ -12,6 +12,10 @@ public class Util {
         return "#" + channel.getName() + ";" + channel.getId().substring(channel.getId().length() - 4);
     }
 
+    public static String getRoomIdForChannel(Channel channel, String name) {
+        return "#" + name + ";" + channel.getId().substring(channel.getId().length() - 4);
+    }
+
     public static long getAudioFileDuration(File file) throws IOException, UnsupportedAudioFileException {
         var audioInputStream = AudioSystem.getAudioInputStream(file);
         var format = audioInputStream.getFormat();

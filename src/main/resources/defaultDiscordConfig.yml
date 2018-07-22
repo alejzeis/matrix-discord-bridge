@@ -1,3 +1,6 @@
+matrixModRole: "Matrix Moderator"
+matrixAdminRole: "Matrix Administrator"
+
 discord:
   token: "Insert Token Here"
   clientId: "Insert ClientId here"

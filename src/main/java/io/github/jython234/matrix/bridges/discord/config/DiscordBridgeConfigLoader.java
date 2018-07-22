@@ -24,6 +24,13 @@ public class DiscordBridgeConfigLoader {
 
         Map map = yaml.load(new FileInputStream(file));
 
+        config.matrixModRole = (String) map.get("matrixModRole");
+        config.matrixAdminRole = (String) map.get("matrixAdminRole");
+
+        if(config.matrixModRole == null || config.matrixAdminRole == null) {
+            throw new KeyNotFoundException("Failed to find all required keys for matrix Admin and Mod roles!");
+        }
+
         Map discord = (Map) map.get("discord");
         if(discord == null) {
             throw new KeyNotFoundException("Failed to find key \"discord\" in config file!");

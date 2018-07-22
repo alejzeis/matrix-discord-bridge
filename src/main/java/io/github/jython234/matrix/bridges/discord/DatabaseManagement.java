@@ -122,6 +122,21 @@ public class DatabaseManagement {
         }
     }
 
+    void processChannelNameChange(TextChannel channel, String oldName) throws IOException, MatrixNetworkException {
+        var room = this.bridge.getDatabase().getRoom(Util.getRoomIdForChannel(channel, oldName));
+        if(room != null) {
+            this.processUserSyncForChannel(channel); // Create a new entry with the new name and same data
+            var newRoom = this.bridge.getDatabase().getRoom(Util.getRoomIdForChannel(channel));
+
+            newRoom.updateMatrixId(room.getMatrixId()); // Transfer the old Matrix ID
+            room.getAdditionalData().forEach(newRoom::updateDataField); // Transfer all the old key, value pairs of additional data
+
+            this.bridge.getDatabase().deleteRoom(room); // Delete the old entry
+
+            this.bridge.getConnector().handleRoomNameChange(channel); // Update the name on the Matrix side
+        }
+    }
+
     public void updateUsernameFromDiscordUser(User user, net.dv8tion.jda.core.entities.User discordUser, MatrixUserClient client) throws MatrixNetworkException {
         user.updateDataField("name", discordUser.getName());
         client.setDisplayName((discordUser.isBot() ? "[BOT] " : "") + discordUser.getName()); // Set the matrix display name

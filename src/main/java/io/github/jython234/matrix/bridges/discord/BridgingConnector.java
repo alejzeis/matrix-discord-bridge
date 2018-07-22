@@ -4,6 +4,8 @@ import io.github.jython234.matrix.appservice.Util;
 import io.github.jython234.matrix.appservice.network.CreateRoomRequest;
 import io.github.jython234.matrix.bridge.db.Room;
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
+import io.github.jython234.matrix.bridge.network.room.PowerLevelsData;
+import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.TextChannel;
 import org.w3c.dom.Text;
 
@@ -46,6 +48,47 @@ public class BridgingConnector {
         return request;
     }
 
+    public PowerLevelsData getDefaultPowerLevels() {
+        // Set the Matrix room power levels now.
+        var powerLevels = new PowerLevelsData();
+        powerLevels.ban = 50;
+        powerLevels.kick = 50;
+        powerLevels.invite = 0;
+        powerLevels.sendMessages = 0;
+        powerLevels.redactOthers = 50;
+        powerLevels.events.put("m.room.name", 100);
+        powerLevels.events.put("m.room.topic", 100);
+        powerLevels.events.put("m.room.canonical_alias", 100);
+        powerLevels.events.put("m.room.power_levels", 75);
+        powerLevels.events.put("m.room.join_rules", 75);
+
+        // Make sure we keep our power level!
+        powerLevels.users.put("@" + this.bridge.getAppservice().getRegistration().getSenderLocalpart() + ":" + this.bridge.getConfig().getMatrixDomain(), 100);
+
+        return powerLevels;
+    }
+
+    public PowerLevelsData appendLevelsForMembers(PowerLevelsData powerLevels, TextChannel channel) {
+        channel.getMembers().forEach(member -> {
+            var userId = this.bridge.getUserIdForDiscordUser(member.getUser());
+
+            member.getRoles().forEach(role -> {
+                if (role.getName().equals(this.bridge.getDiscordConfig().getMatrixModRole())) {
+                    powerLevels.users.put(userId, 50);
+                }
+                if (role.getName().equals(this.bridge.getDiscordConfig().getMatrixAdminRole())) {
+                    powerLevels.users.put(userId, 75);
+                }
+            });
+
+            if (member.hasPermission(Permission.ADMINISTRATOR)) {
+                powerLevels.users.put(userId, 75);
+            }
+        });
+
+        return powerLevels;
+    }
+
     /**
      * Handles inviting and joining all the bridged bot Discord users to the newly created
      * Matrix room.
@@ -54,14 +97,18 @@ public class BridgingConnector {
      * @param alias The full room alias.
      * @param id The matrix room ID.
      */
-    public void handleNewMatrixRoomCreated(String dbId, String alias, String id, boolean manual) throws IOException{
+    public void handleNewMatrixRoomCreated(String dbId, String alias, String id, boolean manual) throws IOException, MatrixNetworkException {
         var room = this.bridge.getDatabase().getRoom(dbId);
         var discordChannel = this.bridge.jda.getTextChannelById((String) room.getAdditionalData().get("channel"));
 
         room.updateMatrixId(id); // Make sure the Matrix ID of the room is stored in the database.
         room.updateDataField("manual", manual); // If the bridge is manually bridged or not
 
-        discordChannel.getMembers().forEach((member) -> {
+        var powerLevels = this.getDefaultPowerLevels();
+
+        this.appendLevelsForMembers(powerLevels, discordChannel);
+
+        discordChannel.getMembers().forEach(member -> {
             var userId = this.bridge.getUserIdForDiscordUser(member.getUser());
             var client = this.bridge.getClientManager().getClientForUser(userId);
 
@@ -74,6 +121,9 @@ public class BridgingConnector {
                 e.printStackTrace();
             }
         });
+
+        if(!manual) // Only set power levels if we control the room, i.e not manually bridged
+            this.bridge.getClientManager().getBridgeClient().setRoomPowerLevels(room.getMatrixId(), powerLevels);
 
         // Done! Display a message now saying the channel is bridged
         discordChannel.sendMessage("**This room is now bridged to** ***" + alias + "***").submit();
@@ -127,5 +177,32 @@ public class BridgingConnector {
 
         room.updateMatrixId("");
         room.updateDataField("manual", false);
+    }
+
+    public void handleRoomTopicChange(TextChannel channel) throws IOException, MatrixNetworkException {
+        var roomId = io.github.jython234.matrix.bridges.discord.Util.getRoomIdForChannel(channel);
+        var room = this.bridge.getDatabase().getRoom(roomId);
+
+        // We want to check if it's in the database, check if it's bridged, and finally if it's manually bridged
+        // we don't want to change the topic in a manually bridged room, as that's already set and we probably don't have permission
+        if(room != null && !room.getMatrixId().equals("") && !((Boolean) room.getAdditionalData().get("manual"))) { // If it's not in the database it's not bridged
+            this.bridge.getClientManager().getBridgeClient().setRoomTopic(room.getMatrixId(), channel.getTopic());
+        }
+    }
+
+    public void handleRoomNameChange(TextChannel channel) throws IOException, MatrixNetworkException {
+        var roomId = io.github.jython234.matrix.bridges.discord.Util.getRoomIdForChannel(channel);
+        var room = this.bridge.getDatabase().getRoom(roomId);
+
+        // We want to check if it's in the database, check if it's bridged, and finally if it's manually bridged
+        // we don't want to change the topic in a manually bridged room, as that's already set and we probably don't have permission
+        if(room != null && !room.getMatrixId().equals("") && !((Boolean) room.getAdditionalData().get("manual"))) { // If it's not in the database it's not bridged
+
+            // Create a new room alias with the new name and set it as the main alias
+            this.bridge.getClientManager().getBridgeClient().createRoomAlias("#!discord_" + roomId + ":" + this.bridge.getConfig().getMatrixDomain(), room.getMatrixId());
+            this.bridge.getClientManager().getBridgeClient().setRoomCanonicalAlias("#!discord_" + roomId + ":" + this.bridge.getConfig().getMatrixDomain(), room.getMatrixId());
+
+            this.bridge.getClientManager().getBridgeClient().setRoomName(room.getMatrixId(), "#" + channel.getName() + " (" + channel.getGuild().getName() + ") [Discord]");
+        }
     }
 }

@@ -7,6 +7,7 @@ import net.dv8tion.jda.core.MessageBuilder;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
+import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 
@@ -51,6 +52,30 @@ public class CommandHandler {
         } else if(content.startsWith("$ping")) {
             this.replyToMember(event.getChannel(), event.getMember(), "PONG! My ping is " + event.getJDA().getPing() + "ms!");
             return true;
+        } else if(content.startsWith("$mod")) {
+            try {
+                this.handleModCommand(event.getChannel(), event.getMessage(), event.getMember());
+            } catch (IOException | MatrixNetworkException e) {
+                this.replyToMember(event.getChannel(), event.getMember(), "There was an error while processing that command!");
+
+                this.bridge.getLogger().warn("Error while processing $mod command.");
+                this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                return true;
+            }
+        } else if(content.startsWith("$admin")) {
+            try {
+                this.handleAdminCommand(event.getChannel(), event.getMessage(), event.getMember());
+            } catch (IOException | MatrixNetworkException e) {
+                this.replyToMember(event.getChannel(), event.getMember(), "There was an error while processing that command!");
+
+                this.bridge.getLogger().warn("Error while processing $admin command.");
+                this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                return true;
+            }
         } else if(content.startsWith("$info")) {
             this.replyToMember(event.getChannel(), event.getMember(), "I'm running " + MatrixDiscordBridge.SOFTWARE + " v" + MatrixDiscordBridge.SOFTWARE_VERSION
                     + "\nSystem:       " + System.getProperty("os.name") + " " + System.getProperty("os.version") + " " + System.getProperty("os.arch")
@@ -113,6 +138,78 @@ public class CommandHandler {
 
         this.bridge.getClientManager().getBridgeClient().invite(room.getMatrixId(), userId);
         this.replyToMember(channel, member, "**Successfully invited** *" + userId +"* **to this room on Matrix.**");
+    }
+
+    private void handleModCommand(TextChannel channel, Message message, Member member) throws IOException, MatrixNetworkException {
+        var split = message.getContentDisplay().trim().split("\\s+");
+        if(split.length != 2) { // Make sure it is correctly formatted
+            this.replyToMember(channel, member, "Correct usage: **$mod [userId]**");
+            return;
+        }
+        var userId = split[1];
+
+        // Get the room
+        var roomId = Util.getRoomIdForChannel(channel);
+        var room = this.bridge.getDatabase().getRoom(roomId);
+        if(room == null) {
+            this.replyToMember(channel, member, "I couldn't find this channel in my database, something is wrong!");
+            return;
+        } else if(room.getMatrixId() == null || room.getMatrixId().equals("")) {
+            this.replyToMember(channel, member, "This channel isn't bridged!");
+            return;
+        }
+
+        for (Role role : member.getRoles()) {
+            if(role.getName().equals(this.bridge.getDiscordConfig().getMatrixModRole())) {
+                var defaultLevels = this.bridge.getConnector().getDefaultPowerLevels();
+                this.bridge.getConnector().appendLevelsForMembers(defaultLevels, channel);
+
+                defaultLevels.users.put(userId, 50); // 50 is moderator, 75 is admin
+
+                this.bridge.getClientManager().getBridgeClient().setRoomPowerLevels(room.getMatrixId(), defaultLevels);
+
+                this.replyToMember(channel, member, "Successfully made **" + userId +"** a Matrix moderator for this room.");
+                return;
+            }
+        }
+
+        this.replyToMember(channel, member, "You don't have permissions to make a Matrix user a moderator, you need to have the **\"" + this.bridge.getDiscordConfig().getMatrixModRole() + "\"** role.");
+    }
+
+    private void handleAdminCommand(TextChannel channel, Message message, Member member) throws IOException, MatrixNetworkException {
+        var split = message.getContentDisplay().trim().split("\\s+");
+        if(split.length != 2) { // Make sure it is correctly formatted
+            this.replyToMember(channel, member, "Correct usage: **$admin [userId]**");
+            return;
+        }
+        var userId = split[1];
+
+        // Get the room
+        var roomId = Util.getRoomIdForChannel(channel);
+        var room = this.bridge.getDatabase().getRoom(roomId);
+        if(room == null) {
+            this.replyToMember(channel, member, "I couldn't find this channel in my database, something is wrong!");
+            return;
+        } else if(room.getMatrixId() == null || room.getMatrixId().equals("")) {
+            this.replyToMember(channel, member, "This channel isn't bridged!");
+            return;
+        }
+
+        for (Role role : member.getRoles()) {
+            if(role.getName().equals(this.bridge.getDiscordConfig().getMatrixAdminRole())) {
+                var defaultLevels = this.bridge.getConnector().getDefaultPowerLevels();
+                this.bridge.getConnector().appendLevelsForMembers(defaultLevels, channel);
+
+                defaultLevels.users.put(userId, 75); // 50 is moderator, 75 is admin
+
+                this.bridge.getClientManager().getBridgeClient().setRoomPowerLevels(room.getMatrixId(), defaultLevels);
+
+                this.replyToMember(channel, member, "Successfully made **" + userId +"** a Matrix admin for this room.");
+                return;
+            }
+        }
+
+        this.replyToMember(channel, member, "You don't have permissions to make a Matrix user an admin, you need to have the **\"" + this.bridge.getDiscordConfig().getMatrixAdminRole() + "\"** role.");
     }
 
     private void handleBridgeCommand(TextChannel channel, Message message, Member member) throws IOException, MatrixNetworkException {

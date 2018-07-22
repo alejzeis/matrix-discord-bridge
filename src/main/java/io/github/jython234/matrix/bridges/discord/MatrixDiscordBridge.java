@@ -106,6 +106,8 @@ public class MatrixDiscordBridge extends MatrixBridge {
     @Override
     protected void onStart() {
         try {
+            this.logger.info("Connecting to discord...");
+
             this.jda = new JDABuilder(AccountType.BOT)
                     .setToken(this.discordConfig.getDiscord().getToken())
                     .addEventListener(new DiscordEventListener(this))
@@ -156,9 +158,9 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
         try {
             this.connector.handleNewMatrixRoomCreated(roomId, alias, id, false);
-        } catch (IOException e) {
+        } catch (MatrixNetworkException | IOException e) {
             this.logger.error("Error while processing alias creation!");
-            this.logger.error("IOException: " + e.getMessage());
+            this.logger.error(e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
         }
     }

@@ -7,6 +7,8 @@ package io.github.jython234.matrix.bridges.discord.config;
  */
 public class DiscordBridgeConfig {
     Discord discord;
+    String matrixModRole;
+    String matrixAdminRole;
 
     DiscordBridgeConfig() {
         this.discord = new Discord();
@@ -35,4 +37,8 @@ public class DiscordBridgeConfig {
     public Discord getDiscord() {
         return discord;
     }
+
+    public String getMatrixModRole() { return this.matrixModRole; }
+
+    public String getMatrixAdminRole() { return this.matrixAdminRole; }
 }
