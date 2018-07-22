@@ -131,6 +131,8 @@ public class MessageEventsHandler {
         var client = webhook.newClient().build();
         if(event.content instanceof MessageContent.TextMessageContent || event.content instanceof MessageContent.NoticeMessageContent) {
             client.send(event.content.body);
+        } else if(event.content instanceof MessageContent.EmoteMessageContent) {
+            client.send("* *" + event.content.body + "*");
         } else if(event.content instanceof MessageContent.ImageMessageContent) {
             var content = (MessageContent.ImageMessageContent) event.content;
 

@@ -1,6 +1,7 @@
 package io.github.jython234.matrix.bridges.discord;
 
 import io.github.jython234.matrix.appservice.Util;
+import io.github.jython234.matrix.appservice.event.room.RoomMemberMatrixEvent;
 import io.github.jython234.matrix.appservice.event.room.message.MessageMatrixEvent;
 import io.github.jython234.matrix.appservice.exception.KeyNotFoundException;
 import io.github.jython234.matrix.appservice.network.CreateRoomRequest;
@@ -178,6 +179,11 @@ public class MatrixDiscordBridge extends MatrixBridge {
             this.logger.error("IOException: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    @MatrixEventHandler
+    public void _onMemberEvent(RoomMemberMatrixEvent event) {
+        // TODO
     }
 
     public void setMatrixAvatarFromDiscord(MatrixUserClient userClient, User discordUser) throws IOException {
