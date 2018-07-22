@@ -240,7 +240,9 @@ public class MessageEventsHandler {
                 } else this.bridge.getLogger().warn("Failed to lookup displayname for " + event.sender + " while creating webhook!");
 
                 if(avatarUrl.successful && avatarUrl.result != null) {
+                    System.out.println("Downloading");
                     this.bridge.getClientManager().downloadMatrixFile(avatarUrl.result, avatar.getPath());
+                    System.out.println("Downloaded.");
                     webhookBuilder.setAvatar(Icon.from(avatar));
 
                     avatar.delete();
