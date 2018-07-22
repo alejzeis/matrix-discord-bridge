@@ -50,7 +50,7 @@
         </repository>
         <repository>
             <id>nexus-snapshots</id>
-            <url>https://nexus.ajann.xyz/repository/maven-snapshots</url>frick
+            <url>https://nexus.ajann.xyz/repository/maven-snapshots</url>
         </repository>
         <repository>
             <id>jcenter</id>
