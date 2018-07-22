@@ -7,7 +7,6 @@ import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import io.github.jython234.matrix.bridge.network.room.PowerLevelsData;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.TextChannel;
-import org.w3c.dom.Text;
 
 import java.io.IOException;
 

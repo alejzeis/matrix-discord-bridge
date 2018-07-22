@@ -50,7 +50,7 @@
         </repository>
         <repository>
             <id>nexus-snapshots</id>
-            <url>https://nexus.ajann.xyz/repository/maven-snapshots</url>
+            <url>https://nexus.ajann.xyz/repository/maven-snapshots</url>frick
         </repository>
         <repository>
             <id>jcenter</id>
@@ -63,7 +63,7 @@
         <dependency>
             <groupId>io.github.jython234.matrix</groupId>
             <artifactId>matrix-bridge-java</artifactId>
-            <version>1.4.3-SNAPSHOT</version>
+            <version>1.4.4-SNAPSHOT</version>
         </dependency>
 
         <dependency>

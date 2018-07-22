@@ -167,11 +167,17 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     @MatrixEventHandler
     public void _onMessageEvent(MessageMatrixEvent event) {
-        if(event.sender.startsWith("@!discord_")) {
+        if(event.sender.startsWith("@!discord_") || event.sender.startsWith("@" + this.getAppservice().getRegistration().getSenderLocalpart())) {
             return; // We don't want message echo from our own bots
         }
 
-        this.logger.info("Matrix message from " + event.sender + ", : " + event.content.body);
+        try {
+            this.messageEventsHandler.bridgeMatrixToDiscord(event);
+        } catch (IOException e) {
+            this.logger.warn("Error while processing Matrix message");
+            this.logger.error("IOException: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public void setMatrixAvatarFromDiscord(MatrixUserClient userClient, User discordUser) throws IOException {
