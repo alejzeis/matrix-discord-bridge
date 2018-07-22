@@ -17,7 +17,6 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLConnection;
-import java.util.concurrent.ExecutionException;
 
 /**
  * This class handles bridging messages between Matrix and Discord.
@@ -36,14 +35,23 @@ public class MessageEventsHandler {
     }
 
     private MessageContent getContentMarkdownToHtml(Message message) {
-        Node doc = this.parser.parse(message.getContentDisplay());
-        var text = this.renderer.render(doc);
+        // TODO: Convert mentions
+        if(message.getContentDisplay().contains("*") || message.getContentDisplay().contains("_") || message.getContentDisplay().contains("~")) {
+            Node doc = this.parser.parse(message.getContentDisplay());
+            var text = this.renderer.render(doc);
 
-        var content = new MessageContent.FormattedTextMessageContent();
-        content.body = message.getContentDisplay();
-        content.format = MessageContent.FormattedTextMessageContent.FORMAT_TYPE_HTML;
-        content.formattedBody = text.trim().replaceAll("\n", "<br>");
-        return content;
+            var content = new MessageContent.FormattedTextMessageContent();
+            content.body = message.getContentDisplay();
+            content.format = MessageContent.FormattedTextMessageContent.FORMAT_TYPE_HTML;
+            content.formattedBody = text.trim().replaceAll("\n", "<br>");
+            return content;
+        } else {
+            // There aren't any markdown characters, so we can send a plain message
+            var content = new MessageContent.TextMessageContent();
+
+            content.body = message.getContentDisplay();
+            return content;
+        }
     }
 
     private MessageContent getContentForDiscordAttachment(String body, Message.Attachment attachment) throws IOException, MatrixNetworkException {
@@ -168,6 +176,8 @@ public class MessageEventsHandler {
 
                 file.delete();
             }
+        } else {
+            client.send("**" + event.content.msgtype + "**: " + event.content.body);
         }
 
         client.close();
@@ -207,56 +217,31 @@ public class MessageEventsHandler {
     public void bridgeMatrixToDiscord(MessageMatrixEvent event) throws IOException {
         this.bridge.getLogger().info("Matrix message from " + event.sender + ", : " + event.content.body);
 
-        var senderDomain = event.sender.split(":")[1];
-
         var room = this.bridge.getDatabase().getRoomByMatrixId(event.roomId);
         var channelId = (String) room.getAdditionalData().get("channel");
+        var channel = this.bridge.getJDA().getTextChannelById(channelId);
 
         var hookId = (String) room.getAdditionalData().get("webhook-" + event.sender);
+
         if(hookId != null) {
-            this.bridge.getJDA().getTextChannelById(channelId).getWebhooks().complete().forEach(webhook -> {
-                if(webhook.getId().equals(hookId)) {
-                    try {
-                        this.sendMatrixMessageViaWebhook(event, webhook);
-                    } catch (MatrixNetworkException e) {
-                        this.bridge.getLogger().warn("Failed to bridge message to discord!");
-                        this.bridge.getLogger().error("MatrixNetworkException: " + e.getMessage());
-                        e.printStackTrace();
-                    }
+            var webhook = this.bridge.getWebhookManager().getWebhookById(channel, hookId);
+            if(webhook != null) {
+                try {
+                    this.sendMatrixMessageViaWebhook(event, webhook);
+                } catch (MatrixNetworkException e) {
+                    this.bridge.getLogger().warn("Failed to bridge message to discord!");
+                    this.bridge.getLogger().error("MatrixNetworkException: " + e.getMessage());
+                    e.printStackTrace();
                 }
-            });
-        } else {
-            // Create the new webhook
-            var webhookBuilder = this.bridge.getJDA().getTextChannelById(channelId).createWebhook(event.sender);
-
-            // Set name and avatar
-            try {
-                var avatar = new File(this.bridge.getTmpDir() + File.separator + System.currentTimeMillis());
-                var name = this.bridge.getClientManager().getBridgeClient().getDisplayName(event.sender);
-                var avatarUrl = this.bridge.getClientManager().getBridgeClient().getAvatarURL(event.sender);
-
-                if(name.successful) {
-                    webhookBuilder.setName(name.result + " (" + senderDomain + ")");
-                } else this.bridge.getLogger().warn("Failed to lookup displayname for " + event.sender + " while creating webhook!");
-
-                if(avatarUrl.successful && avatarUrl.result != null) {
-                    System.out.println("Downloading");
-                    this.bridge.getClientManager().downloadMatrixFile(avatarUrl.result, avatar.getPath());
-                    System.out.println("Downloaded.");
-                    webhookBuilder.setAvatar(Icon.from(avatar));
-
-                    avatar.delete();
-                } else this.bridge.getLogger().warn("Failed to lookup avatar URL for " + event.sender + " while creating webhook!");
-            } catch (MatrixNetworkException e) {
-                e.printStackTrace();
             }
-
-            var webhook = webhookBuilder.complete();
-
-            // Store the ID for future messages
-            room.updateDataField("webhook-" + event.sender, webhook.getId());
-
+        } else {
             try {
+                // Create the webhook
+                var webhook = this.bridge.getWebhookManager().createWebhookForUser(channel, event.sender);
+
+                // Store the ID for future messages
+                room.updateDataField("webhook-" + event.sender, webhook.getId());
+
                 // Send the message
                 this.sendMatrixMessageViaWebhook(event, webhook);
             } catch (MatrixNetworkException e) {

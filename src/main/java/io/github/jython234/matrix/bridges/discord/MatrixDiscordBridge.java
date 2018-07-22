@@ -10,10 +10,7 @@ import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import io.github.jython234.matrix.bridge.network.MatrixUserClient;
 import io.github.jython234.matrix.bridges.discord.config.DiscordBridgeConfig;
 import io.github.jython234.matrix.bridges.discord.config.DiscordBridgeConfigLoader;
-import io.github.jython234.matrix.bridges.discord.handler.CommandHandler;
-import io.github.jython234.matrix.bridges.discord.handler.MessageEventsHandler;
-import io.github.jython234.matrix.bridges.discord.handler.PresenceHandler;
-import io.github.jython234.matrix.bridges.discord.handler.UserEventsHandler;
+import io.github.jython234.matrix.bridges.discord.handler.*;
 import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.JDABuilder;
@@ -52,6 +49,7 @@ public class MatrixDiscordBridge extends MatrixBridge {
     private PresenceHandler presenceHandler;
     private MessageEventsHandler messageEventsHandler;
     private UserEventsHandler userEventsHandler;
+    private WebhookManager webhookManager;
 
     protected JDA jda;
 
@@ -69,6 +67,8 @@ public class MatrixDiscordBridge extends MatrixBridge {
         this.presenceHandler = new PresenceHandler(this);
         this.messageEventsHandler = new MessageEventsHandler(this);
         this.userEventsHandler = new UserEventsHandler(this);
+
+        this.webhookManager = new WebhookManager(this);
 
         if(!tmpDir.exists()) {
             tmpDir.mkdirs();
@@ -240,5 +240,9 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     public UserEventsHandler getUserEventsHandler() {
         return this.userEventsHandler;
+    }
+
+    public WebhookManager getWebhookManager() {
+        return this.webhookManager;
     }
 }
