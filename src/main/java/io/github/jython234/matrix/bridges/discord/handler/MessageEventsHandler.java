@@ -41,7 +41,10 @@ public class MessageEventsHandler {
 
         for(Member member : message.getMentionedMembers()) {
             hasMentions = true;
+
+            // For some reason the ! is only present when mentioning a nickname, not a username
             inputText = inputText.replaceAll("<@!"+member.getUser().getId()+">", "@" + member.getEffectiveName());
+            inputText = inputText.replaceAll("<@"+member.getUser().getId()+">", "@" + member.getUser().getName());
         }
 
         for(Emote emote : message.getEmotes()) {
@@ -154,8 +157,10 @@ public class MessageEventsHandler {
         var client = webhook.newClient().build();
 
         // Replace any custom emotes in the message
-        for(var emote : webhook.getChannel().getGuild().getEmotes()) {
-            event.content.body = event.content.body.replaceAll(":" + emote.getName() + ":", "<:" + emote.getName() + ":" + emote.getId() + ">");
+        if(event.content.body.contains(":")) {
+            for(var emote : webhook.getChannel().getGuild().getEmotes()) {
+                event.content.body = event.content.body.replaceAll(":" + emote.getName() + ":", "<:" + emote.getName() + ":" + emote.getId() + ">");
+            }
         }
 
         if(event.content instanceof MessageContent.TextMessageContent || event.content instanceof MessageContent.NoticeMessageContent) {

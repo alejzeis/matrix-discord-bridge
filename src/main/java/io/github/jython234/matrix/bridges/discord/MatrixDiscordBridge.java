@@ -1,6 +1,7 @@
 package io.github.jython234.matrix.bridges.discord;
 
 import io.github.jython234.matrix.appservice.Util;
+import io.github.jython234.matrix.appservice.event.presence.PresenceMatrixEvent;
 import io.github.jython234.matrix.appservice.event.room.RoomMemberMatrixEvent;
 import io.github.jython234.matrix.appservice.event.room.message.MessageMatrixEvent;
 import io.github.jython234.matrix.appservice.exception.KeyNotFoundException;
@@ -185,7 +186,18 @@ public class MatrixDiscordBridge extends MatrixBridge {
 
     @MatrixEventHandler
     public void _onMemberEvent(RoomMemberMatrixEvent event) {
-        // TODO
+        if(event.stateKey.startsWith("@!discord_") || event.stateKey.startsWith("@" + this.getAppservice().getRegistration().getSenderLocalpart())
+                || event.sender.startsWith("@" + this.getAppservice().getRegistration().getSenderLocalpart())) {
+            return; // We don't want echo from our own bots
+        }
+
+        try {
+            this.userEventsHandler.handleMatrixMembershipEvent(event);
+        } catch (IOException | MatrixNetworkException e) {
+            this.logger.warn("Error while processing Matrix room membership event.");
+            this.logger.error(e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public void setMatrixAvatarFromDiscord(MatrixUserClient userClient, User discordUser) throws IOException {

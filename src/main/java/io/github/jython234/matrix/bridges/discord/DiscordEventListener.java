@@ -44,10 +44,12 @@ public class DiscordEventListener extends ListenerAdapter {
         })));
 
         var end = System.currentTimeMillis();
-        this.bridge.getLogger().info("Inital Sync complete in " + (end - start) + "ms.");
+        this.bridge.getLogger().info("Initial Sync complete in " + (end - start) / 1000 + " seconds.");
 
         this.bridge.getEmojiManager().syncEmojis(event.getJDA());
     }
+
+    // Emotes --------------------------------------------------------
 
     @Override
     public void onEmoteAdded(EmoteAddedEvent event) {

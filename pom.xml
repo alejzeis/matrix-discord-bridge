@@ -63,7 +63,7 @@
         <dependency>
             <groupId>io.github.jython234.matrix</groupId>
             <artifactId>matrix-bridge-java</artifactId>
-            <version>1.4.5-SNAPSHOT</version>
+            <version>1.4.7-SNAPSHOT</version>
         </dependency>
 
         <dependency>
