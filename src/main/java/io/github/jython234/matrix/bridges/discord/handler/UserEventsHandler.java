@@ -57,7 +57,7 @@ public class UserEventsHandler {
             case JOIN:
                 if(!this.bridge.getWebhookManager().userHasWebhook(room, event.stateKey)) { // Check if the user had a webhook, meaning that they were already in the room before
                     // They weren't in the room before, so display a join message
-                    channel.sendMessage("**" + event.content.displayname + "** (*" + event.stateKey + "*) has joined the room.").submit();
+                    channel.sendMessage("__**Matrix:**__ ***" + event.content.displayname + "*** (*" + event.stateKey + "*) has joined the room.").submit();
                 }
 
                 // Update the webhook for this user
@@ -68,11 +68,11 @@ public class UserEventsHandler {
                 this.bridge.getWebhookManager().removeWebhookForUser(channel, room, event.stateKey);
 
                 // Send a leave message
-                channel.sendMessage("*" + event.stateKey + "* has left the room.").submit();
+                channel.sendMessage("__**Matrix:**__ *" + event.stateKey + "* has left the room.").submit();
                 break;
             case INVITE:
                 // Send an invite message
-                channel.sendMessage("**" + event.content.displayname + "** (*" + event.stateKey + "*) was invited to the room by *" + event.sender + "*.").submit();
+                channel.sendMessage("__**Matrix:**__ ***" + event.content.displayname + "*** (*" + event.stateKey + "*) was invited to the room by *" + event.sender + "*.").submit();
                 break;
         }
     }

@@ -72,11 +72,11 @@ public class DiscordEventListener extends ListenerAdapter {
     @Override
     public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
         try {
-            /*if(event.getAuthor().getId().equals(this.bridge.getDiscordConfig().getDiscord().getClientId()))
-                return; // We don't want echo from our own bot*/
+            if(event.getAuthor().getId().equals(this.bridge.getDiscordConfig().getDiscord().getClientId()) && event.getMessage().getContentDisplay().startsWith("__**Matrix:**__"))
+                return; // We don't want echo from our own bot for Matrix event messages like joins and leaves
 
+            this.bridge.getCommandHandler().processCommand(event); // Try to process as a bot command first
             this.bridge.getMessageEventsHandler().bridgeDiscordToMatrix(event); // Send the message to Matrix
-            this.bridge.getCommandHandler().processCommand(event); // try to process the message as a Bot command
         } catch (MatrixNetworkException | IOException e) {
             this.bridge.getLogger().error("Error while processing message event from Discord");
             this.bridge.getLogger().error(e.getClass().getName() + ": " + e.getMessage());

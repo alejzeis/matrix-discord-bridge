@@ -281,10 +281,7 @@ public class MessageEventsHandler {
         } else {
             try {
                 // Create the webhook
-                var webhook = this.bridge.getWebhookManager().createWebhookForUser(channel, event.sender);
-
-                // Store the ID for future messages
-                room.updateDataField("webhook-" + event.sender, webhook.getId());
+                var webhook = this.bridge.getWebhookManager().createWebhookForUser(channel, room, event.sender);
 
                 // Send the message
                 this.sendMatrixMessageViaWebhook(event, webhook);

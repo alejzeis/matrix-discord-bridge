@@ -17,29 +17,32 @@ public class WebhookManager {
         this.bridge = bridge;
     }
 
-    Webhook createWebhookForUser(TextChannel channel, String userId) throws IOException, MatrixNetworkException {
+    Webhook createWebhookForUser(TextChannel channel, Room room, String userId) throws IOException, MatrixNetworkException {
         var senderDomain = userId.split(":")[1]; // Get the last part of the user ID, which is the domain
 
         // Create the new webhook
         var webhookBuilder = channel.createWebhook(userId);
-
+        var webhook = webhookBuilder.complete();
 
         var avatar = new File(this.bridge.getTmpDir() + File.separator + System.currentTimeMillis() + ".png"); // Temporary file for downloading avatar
         var name = this.bridge.getClientManager().getBridgeClient().getDisplayName(userId); // Get the displayname of the user
         var avatarUrl = this.bridge.getClientManager().getBridgeClient().getAvatarURL(userId); // Get the avatar url of the user
 
         if(name.successful) {
-            webhookBuilder.setName(name.result + " (" + senderDomain + ")").queue();
+            webhook.getManager().setName(name.result + " (" + senderDomain + ")").queue();
         } else this.bridge.getLogger().warn("Failed to lookup displayname for " + userId + " while creating webhook!");
 
         if(avatarUrl.successful && avatarUrl.result != null) { // Result will be null if the user doesn't have an avatar set
             this.bridge.getClientManager().downloadMatrixFile(avatarUrl.result, avatar.getPath());
-            webhookBuilder.setAvatar(Icon.from(avatar)).queue();
+            webhook.getManager().setAvatar(Icon.from(avatar)).queue();
 
             avatar.delete();
         } else this.bridge.getLogger().warn("Failed to lookup avatar URL for " + userId + " while creating webhook!");
 
-        return webhookBuilder.complete();
+        // Store the ID for future messages
+        room.updateDataField("webhook-" + userId, webhook.getId());
+
+        return webhook;
     }
 
     Webhook getWebhookById(TextChannel channel, String id) {
@@ -61,7 +64,7 @@ public class WebhookManager {
         if(hookId != null) {
             channel.getWebhooks().complete().forEach(webhook -> {
                 if(webhook.getId().equals(hookId)) {
-                    webhook.delete().queue();
+                    webhook.delete().submit();
                 }
             });
         }
@@ -88,6 +91,6 @@ public class WebhookManager {
 
                 webhook.getManager().queue();
             }
-        } else createWebhookForUser(channel, userId);
+        } else createWebhookForUser(channel, room, userId);
     }
 }
