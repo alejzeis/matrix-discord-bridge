@@ -35,6 +35,8 @@ public class CommandHandler {
     }
 
     public boolean processCommand(GuildMessageReceivedEvent event) {
+        if(event.getAuthor().isBot()) return false;
+
         var content = event.getMessage().getContentDisplay();
         if(content.startsWith("$invite")) {
             // This person wants to invite someone

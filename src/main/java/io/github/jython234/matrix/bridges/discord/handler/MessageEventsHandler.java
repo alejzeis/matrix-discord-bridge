@@ -5,6 +5,7 @@ import io.github.jython234.matrix.appservice.event.room.message.MessageMatrixEve
 import io.github.jython234.matrix.bridge.network.MatrixNetworkException;
 import io.github.jython234.matrix.bridges.discord.MatrixDiscordBridge;
 import io.github.jython234.matrix.bridges.discord.Util;
+import net.dv8tion.jda.core.MessageBuilder;
 import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import org.commonmark.node.Node;
@@ -156,10 +157,17 @@ public class MessageEventsHandler {
     private void sendMatrixMessageViaWebhook(MessageMatrixEvent event, Webhook webhook) throws MatrixNetworkException {
         var client = webhook.newClient().build();
 
-        // Replace any custom emotes in the message
         if(event.content.body.contains(":")) {
+            // Replace any custom emotes in the message
             for(var emote : webhook.getChannel().getGuild().getEmotes()) {
                 event.content.body = event.content.body.replaceAll(":" + emote.getName() + ":", "<:" + emote.getName() + ":" + emote.getId() + ">");
+            }
+
+            // Replace any mentions in the message
+            for (Member member : webhook.getChannel().getMembers()) {
+                if(event.content.body.contains(member.getUser().getName())) {
+                    event.content.body = event.content.body.replaceAll(member.getUser().getName() + ":", "<@!" + member.getUser().getId() + ">");
+                }
             }
         }
 
